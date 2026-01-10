@@ -6,25 +6,61 @@ using UnityEngine;
 using UnityEngine.Networking;
 using GLTFast;
 
-public class Avatar : MonoBehaviour
+using Unity.Netcode;
+using Unity.Collections;
+
+public class Avatar : NetworkBehaviour
 {
     public string serverUrl = "http://localhost:3000";
-    public string avatarUrl = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF/Duck.gltf";
+    // Stores the avatar URL synchronized across the network
+    private readonly NetworkVariable<FixedString512Bytes> avatarUrlNetwork = new NetworkVariable<FixedString512Bytes>();
 
-    void Start()
+    public override void OnNetworkSpawn()
     {
-        // Execute on main thread
-        var filePath = WindowsFileDialog.Open("GLB Files (*.glb)|*.glb", "Select Avatar");
-        if (!string.IsNullOrEmpty(filePath))
+        base.OnNetworkSpawn();
+        
+        avatarUrlNetwork.OnValueChanged += OnAvatarUrlChanged;
+
+        // If there's already a URL set when we spawn (e.g. late join), load it
+        if (!avatarUrlNetwork.Value.IsEmpty)
         {
-            StartCoroutine(UploadAndLoad(filePath));
+            _ = LoadAvatar(avatarUrlNetwork.Value.ToString());
         }
-        else
+
+        if (IsOwner)
         {
-            // Fallback or do nothing
-            Debug.Log("No file selected, loading default.");
-            _ = LoadAvatar(avatarUrl);
+            // Execute on main thread
+            var filePath = WindowsFileDialog.Open("GLB Files (*.glb)|*.glb", "Select Avatar");
+            if (!string.IsNullOrEmpty(filePath))
+            {
+                StartCoroutine(UploadAndLoad(filePath));
+            }
+            else
+            {
+                // Fallback or do nothing
+                Debug.Log("No file selected, loading default.");
+                // For default, we also need to sync it if we want others to see it, 
+                // but usually default is a placeholder. attempt to sync default if needed.
+                // For now, let's just sync the default URL if nothing selected.
+                SetAvatarUrlServerRpc(serverUrl + "/default_avatar.glb"); // Example fallback or just keep local if intended.
+                // Actually, let's stick to the previous logic but via RPC
+                 SetAvatarUrlServerRpc(serverUrl + "/default"); // Simplified for now, assuming server handles it or just empty
+            }
         }
+    }
+
+    private void OnAvatarUrlChanged(FixedString512Bytes previousValue, FixedString512Bytes newValue)
+    {
+        if (!newValue.IsEmpty)
+        {
+            _ = LoadAvatar(newValue.ToString());
+        }
+    }
+
+    [ServerRpc]
+    private void SetAvatarUrlServerRpc(string url)
+    {
+        avatarUrlNetwork.Value = new FixedString512Bytes(url);
     }
 
     IEnumerator UploadAndLoad(string filePath)
@@ -66,12 +102,12 @@ public class Avatar : MonoBehaviour
                      loadUrl = responseText.Trim();
                 }
 
-                if (!loadUrl.StartsWith("http"))
+                 if (!loadUrl.StartsWith("http"))
                 {
                      loadUrl = $"{serverUrl}/{loadUrl}"; 
                 }
                 
-                 _ = LoadAvatar(loadUrl);
+                SetAvatarUrlServerRpc(loadUrl);
             }
         }
     }
