@@ -55,5 +55,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          generate_release_notes: true
+          generate_release_notes: ${{ matrix.name == 'Windows' }}
           files: ${{ matrix.name }}.zip
