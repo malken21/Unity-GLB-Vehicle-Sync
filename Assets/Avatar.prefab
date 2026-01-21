@@ -15,6 +15,8 @@ GameObject:
   - component: {fileID: 6613134372731748448}
   - component: {fileID: 860351763188592711}
   - component: {fileID: 5307786580590753834}
+  - component: {fileID: 7433034790101871169}
+  - component: {fileID: 7696437684327731585}
   m_Layer: 0
   m_Name: Avatar
   m_TagString: Untagged
@@ -187,4 +189,48 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 457711db7bfbd424c8a8ba9369a2bfaa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Avatar
-  avatarUrl: https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF/Duck.gltf
+  ShowTopMostFoldoutHeaderGroup: 1
+  serverUrl: http://localhost:3000
+--- !u!114 &7433034790101871169
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9030851858174537478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cbad997047d1f2842a16c1b27a7683fd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HoverMotor
+  hoverHeight: 4
+  hoverForce: 1500
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 128
+  hoverPID:
+    pFactor: 10
+    iFactor: 0.01
+    dFactor: 5
+  speed: 1500
+  turnSpeed: 1000
+  brakingFactor: 0.95
+  bankFactor: 0.1
+  stability: 0.3
+  stabilitySpeed: 2
+  throttleInput: 0
+  turnInput: 0
+  isBraking: 0
+--- !u!114 &7696437684327731585
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9030851858174537478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e7acfb081e3f2e4e82fcd77c531bfa2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HoverInput
+  ShowTopMostFoldoutHeaderGroup: 1
