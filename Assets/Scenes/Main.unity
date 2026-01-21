@@ -574,7 +574,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bb308489d0d86654db9dde40a1c7f7c4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ConnectionManager
-  autoStartClientInEditor: 1
+  autoStartClientInEditor: 0
 --- !u!4 &1493667448
 Transform:
   m_ObjectHideFlags: 0
