@@ -29,6 +29,21 @@ public class Avatar : NetworkBehaviour
 
         if (IsOwner)
         {
+            // Setup Camera Follow
+            if (Camera.main != null)
+            {
+                var cameraFollow = Camera.main.gameObject.GetComponent<CameraFollow>();
+                if (cameraFollow == null)
+                {
+                    cameraFollow = Camera.main.gameObject.AddComponent<CameraFollow>();
+                }
+                cameraFollow.SetTarget(transform);
+            }
+            else
+            {
+                Debug.LogWarning("Main Camera not found. Camera follow will not work.");
+            }
+
             // Execute on main thread
             var filePath = WindowsFileDialog.Open("GLB Files (*.glb)|*.glb", "Select Avatar");
             if (!string.IsNullOrEmpty(filePath))
