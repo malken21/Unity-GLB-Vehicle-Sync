@@ -11,7 +11,7 @@ using Unity.Collections;
 
 public class Avatar : NetworkBehaviour
 {
-    public string serverUrl = "http://localhost:3000";
+
     // Stores the avatar URL synchronized across the network
     private readonly NetworkVariable<FixedString512Bytes> avatarUrlNetwork = new NetworkVariable<FixedString512Bytes>();
 
@@ -42,9 +42,9 @@ public class Avatar : NetworkBehaviour
                 // For default, we also need to sync it if we want others to see it, 
                 // but usually default is a placeholder. attempt to sync default if needed.
                 // For now, let's just sync the default URL if nothing selected.
-                SetAvatarUrlServerRpc(serverUrl + "/default_avatar.glb"); // Example fallback or just keep local if intended.
+                SetAvatarUrlServerRpc(ConnectionManager.Instance.serverUrl + "/default_avatar.glb"); // Example fallback or just keep local if intended.
                 // Actually, let's stick to the previous logic but via RPC
-                 SetAvatarUrlServerRpc(serverUrl + "/default"); // Simplified for now, assuming server handles it or just empty
+                 SetAvatarUrlServerRpc(ConnectionManager.Instance.serverUrl + "/default"); // Simplified for now, assuming server handles it or just empty
             }
         }
     }
@@ -69,7 +69,7 @@ public class Avatar : NetworkBehaviour
         WWWForm form = new WWWForm();
         form.AddBinaryData("file", fileData, Path.GetFileName(filePath), "model/gltf-binary");
 
-        using (UnityWebRequest www = UnityWebRequest.Post(serverUrl + "/upload", form))
+        using (UnityWebRequest www = UnityWebRequest.Post(ConnectionManager.Instance.serverUrl + "/upload", form))
         {
             yield return www.SendWebRequest();
 
@@ -104,7 +104,7 @@ public class Avatar : NetworkBehaviour
 
                  if (!loadUrl.StartsWith("http"))
                 {
-                     loadUrl = $"{serverUrl}/{loadUrl}"; 
+                     loadUrl = $"{ConnectionManager.Instance.serverUrl}/{loadUrl}"; 
                 }
                 
                 SetAvatarUrlServerRpc(loadUrl);
