@@ -11,7 +11,7 @@ using Unity.Collections;
 
 public class Avatar : NetworkBehaviour
 {
-    public string serverUrl = "http://localhost:3000";
+
     // Stores the avatar URL synchronized across the network
     private readonly NetworkVariable<FixedString512Bytes> avatarUrlNetwork = new NetworkVariable<FixedString512Bytes>();
 
@@ -42,9 +42,18 @@ public class Avatar : NetworkBehaviour
                 // For default, we also need to sync it if we want others to see it, 
                 // but usually default is a placeholder. attempt to sync default if needed.
                 // For now, let's just sync the default URL if nothing selected.
-                SetAvatarUrlServerRpc(serverUrl + "/default_avatar.glb"); // Example fallback or just keep local if intended.
+                SetAvatarUrlServerRpc(ConnectionManager.Instance.serverUrl + "/default_avatar.glb"); // Example fallback or just keep local if intended.
                 // Actually, let's stick to the previous logic but via RPC
-                 SetAvatarUrlServerRpc(serverUrl + "/default"); // Simplified for now, assuming server handles it or just empty
+                 SetAvatarUrlServerRpc(ConnectionManager.Instance.serverUrl + "/default"); // Simplified for now, assuming server handles it or just empty
+            }
+        }
+        else
+        {
+            // Disable input controls for non-owners to prevent controlling other players
+            var rotator = GetComponent<KeyboardRotator>();
+            if (rotator != null)
+            {
+                rotator.enabled = false;
             }
         }
     }
@@ -69,7 +78,7 @@ public class Avatar : NetworkBehaviour
         WWWForm form = new WWWForm();
         form.AddBinaryData("file", fileData, Path.GetFileName(filePath), "model/gltf-binary");
 
-        using (UnityWebRequest www = UnityWebRequest.Post(serverUrl + "/upload", form))
+        using (UnityWebRequest www = UnityWebRequest.Post(ConnectionManager.Instance.serverUrl + "/upload", form))
         {
             yield return www.SendWebRequest();
 
@@ -104,7 +113,7 @@ public class Avatar : NetworkBehaviour
 
                  if (!loadUrl.StartsWith("http"))
                 {
-                     loadUrl = $"{serverUrl}/{loadUrl}"; 
+                     loadUrl = $"{ConnectionManager.Instance.serverUrl}/{loadUrl}"; 
                 }
                 
                 SetAvatarUrlServerRpc(loadUrl);
@@ -118,6 +127,10 @@ public class Avatar : NetworkBehaviour
         public string url;
     }
 
+    private GameObject modelContainer;
+
+    [SerializeField] private Transform customModelParent; // User specified parent
+
     public async Task LoadAvatar(string url)
     {
         var gltf = new GltfImport();
@@ -125,7 +138,56 @@ public class Avatar : NetworkBehaviour
 
         if (success)
         {
-            await gltf.InstantiateMainSceneAsync(transform);
+            // Clean up previous container
+            if (modelContainer != null)
+            {
+                Destroy(modelContainer);
+            }
+            
+            // Create a new container for the model
+            modelContainer = new GameObject("ModelContainer");
+
+            // Set parent based on configuration
+            if (customModelParent != null)
+            {
+                modelContainer.transform.SetParent(customModelParent, false);
+            }
+            else
+            {
+                modelContainer.transform.SetParent(transform, false);
+            }
+
+            // Instantiate into the container
+            await gltf.InstantiateMainSceneAsync(modelContainer.transform);
+            
+            // Adjust position so the bottom of the mesh is at the origin (pivot) of the container
+            Bounds bounds = new Bounds(modelContainer.transform.position, Vector3.zero);
+            bool hasBounds = false;
+            
+            // Calculate bounds from renderers inside the container
+            foreach (var renderer in modelContainer.GetComponentsInChildren<Renderer>())
+            {
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+            }
+
+            if (hasBounds)
+            {
+                float currentMinY = bounds.min.y;
+                float targetY = modelContainer.transform.position.y;
+                float shiftY = targetY - currentMinY;
+
+                // Move the container to adjust height
+                modelContainer.transform.position += new Vector3(0, shiftY, 0);
+            }
+
             Debug.Log($"Avatar loaded successfully from {url}");
         }
         else
