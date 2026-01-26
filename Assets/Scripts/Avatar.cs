@@ -29,7 +29,6 @@ public class Avatar : NetworkBehaviour
 
         if (IsOwner)
         {
-
             // Execute on main thread
             var filePath = WindowsFileDialog.Open("GLB Files (*.glb)|*.glb", "Select Avatar");
             if (!string.IsNullOrEmpty(filePath))
@@ -46,6 +45,15 @@ public class Avatar : NetworkBehaviour
                 SetAvatarUrlServerRpc(ConnectionManager.Instance.serverUrl + "/default_avatar.glb"); // Example fallback or just keep local if intended.
                 // Actually, let's stick to the previous logic but via RPC
                  SetAvatarUrlServerRpc(ConnectionManager.Instance.serverUrl + "/default"); // Simplified for now, assuming server handles it or just empty
+            }
+        }
+        else
+        {
+            // Disable input controls for non-owners to prevent controlling other players
+            var rotator = GetComponent<KeyboardRotator>();
+            if (rotator != null)
+            {
+                rotator.enabled = false;
             }
         }
     }

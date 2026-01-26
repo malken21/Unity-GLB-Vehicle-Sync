@@ -63,7 +63,6 @@ GameObject:
   m_Component:
   - component: {fileID: 5757329343080021427}
   - component: {fileID: 5257127447930626688}
-  - component: {fileID: 2625985893360835437}
   m_Layer: 0
   m_Name: Horiz
   m_TagString: Untagged
@@ -99,24 +98,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: feb181cc0e13e344e96c22fcd2036c18, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::KeepLevel
---- !u!114 &2625985893360835437
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1995318460808175089}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 84e62aba3c6ad64488d7e53b0abc4f33, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::KeyboardRotator
-  targetRigidbody: {fileID: 4529568741319297461}
-  targetTransform: {fileID: 5757329343080021427}
-  torqueStrength: 10
-  rotationSpeed: 100
-  wsAxis: {x: 0, y: 0, z: 1}
-  adAxis: {x: 0, y: 1, z: 0}
 --- !u!1 &6766441239349249528
 GameObject:
   m_ObjectHideFlags: 0
@@ -162,6 +143,7 @@ GameObject:
   - component: {fileID: 5307786580590753834}
   - component: {fileID: 4529568741319297461}
   - component: {fileID: 6189257738961732581}
+  - component: {fileID: 4269160822374962831}
   m_Layer: 0
   m_Name: Avatar
   m_TagString: Untagged
@@ -199,7 +181,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3307858247
+  GlobalObjectIdHash: 309094343
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -316,6 +298,26 @@ MonoBehaviour:
   UseRigidBodyForMotion: 0
   AutoUpdateKinematicState: 1
   AutoSetKinematicOnDespawn: 1
+--- !u!114 &4269160822374962831
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9030851858174537478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 84e62aba3c6ad64488d7e53b0abc4f33, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KeyboardRotator
+  targetRigidbody: {fileID: 4529568741319297461}
+  targetTransform: {fileID: 5757329343080021427}
+  torqueStrength: 10
+  rotationSpeed: 100
+  wsAxis: {x: 0, y: 0, z: 1}
+  adAxis: {x: 0, y: 1, z: 0}
+  resistanceCoefficient: 1.5
+  minResistance: 0.05
 --- !u!1001 &1181857983095725674
 PrefabInstance:
   m_ObjectHideFlags: 0

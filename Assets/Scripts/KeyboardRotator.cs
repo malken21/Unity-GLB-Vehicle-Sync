@@ -22,6 +22,13 @@ public class KeyboardRotator : MonoBehaviour
     [Tooltip("A/Dキー入力時の回転軸（ローカル座標系）。デフォルトはY軸（右旋回・左旋回）。横転させたい場合は(0, 0, -1)などに設定してください。")]
     [SerializeField] private Vector3 adAxis = Vector3.up;
 
+    [Header("Resistance Settings")]
+    [Tooltip("回転速度に比例する抵抗係数。値が大きいほど高速回転時の抵抗が強くなります。")]
+    [SerializeField] private float resistanceCoefficient = 1.5f;
+
+    [Tooltip("最小抵抗値。回転している限り常に発生する抵抗のベース値です。")]
+    [SerializeField] private float minResistance = 0.05f;
+
     private void Start()
     {
         if (targetRigidbody == null)
@@ -43,18 +50,43 @@ public class KeyboardRotator : MonoBehaviour
 
         // 入力を取得 (New Input System)
         float inputWS = 0f;
-        if (Keyboard.current.wKey.isPressed) inputWS = 1f;  // 前方向
-        else if (Keyboard.current.sKey.isPressed) inputWS = -1f; // 後ろ方向
+        // 前方向
+        if (Keyboard.current.wKey.isPressed) inputWS += 1f;
+        // 後ろ方向
+        if (Keyboard.current.sKey.isPressed) inputWS -= 1f;
 
         float inputAD = 0f;
-        if (Keyboard.current.dKey.isPressed) inputAD = 1f;  // 右へ
-        else if (Keyboard.current.aKey.isPressed) inputAD = -1f; // 左へ
+        // 右へ
+        if (Keyboard.current.dKey.isPressed) inputAD += 1f;
+        // 左へ
+        if (Keyboard.current.aKey.isPressed) inputAD -= 1f;
 
-        // W/Sキー: トルクによる回転
+        // W/Sキー: トルクによる回転（目標角速度への追従）
         if (inputWS != 0f && targetRigidbody != null)
         {
             var torque = targetTransform.TransformDirection(wsAxis) * inputWS * torqueStrength;
             targetRigidbody.AddTorque(torque, ForceMode.Force);
+        }
+
+        // 回転抵抗の適用 (回転速度が速いほど抵抗が大きくなる)
+        if (targetRigidbody != null)
+        {
+            Vector3 angularVel = targetRigidbody.angularVelocity;
+            float sqrMag = angularVel.sqrMagnitude;
+            
+            // 完全に停止していない場合のみ抵抗をかける
+            if (sqrMag > 0.0001f)
+            {
+                float speed = Mathf.Sqrt(sqrMag);
+                // 抵抗の強さ = 最小抵抗 + (速度 * 係数)
+                float resistanceMagnitude = minResistance + (speed * resistanceCoefficient);
+                
+                // 回転方向の逆向きにトルクをかける
+                // angularVelはワールド座標系
+                Vector3 resistanceTorque = -angularVel.normalized * resistanceMagnitude;
+                
+                targetRigidbody.AddTorque(resistanceTorque, ForceMode.Force);
+            }
         }
 
         // A/Dキー: 直接回転（Transform.Rotate）
