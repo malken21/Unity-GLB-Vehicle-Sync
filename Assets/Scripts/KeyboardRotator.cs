@@ -17,7 +17,7 @@ public class KeyboardRotator : MonoBehaviour
     [SerializeField] private float rotationSpeed = 100f;
 
     [Tooltip("W/Sキー入力時の回転軸（ローカル座標系）。デフォルトはX軸（前転・後転）。")]
-    [SerializeField] private Vector3 wsAxis = Vector3.right;
+    [SerializeField] private Vector3 wsAxis = Vector3.forward;
 
     [Tooltip("A/Dキー入力時の回転軸（ローカル座標系）。デフォルトはY軸（右旋回・左旋回）。横転させたい場合は(0, 0, -1)などに設定してください。")]
     [SerializeField] private Vector3 adAxis = Vector3.up;
@@ -50,12 +50,11 @@ public class KeyboardRotator : MonoBehaviour
         if (Keyboard.current.dKey.isPressed) inputAD = 1f;  // 右へ
         else if (Keyboard.current.aKey.isPressed) inputAD = -1f; // 左へ
 
-        // W/Sキー: トルクによる回転（物理挙動、前後転など）
-        // Rigidbodyが必要
+        // W/Sキー: トルクによる回転
         if (inputWS != 0f && targetRigidbody != null)
         {
-            Vector3 torque = wsAxis * inputWS * torqueStrength;
-            targetRigidbody.AddRelativeTorque(torque, ForceMode.Force);
+            var torque = targetTransform.TransformDirection(wsAxis) * inputWS * torqueStrength;
+            targetRigidbody.AddTorque(torque, ForceMode.Force);
         }
 
         // A/Dキー: 直接回転（Transform.Rotate）
