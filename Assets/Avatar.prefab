@@ -112,8 +112,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::KeyboardRotator
   targetRigidbody: {fileID: 4529568741319297461}
+  targetTransform: {fileID: 5757329343080021427}
   torqueStrength: 10
-  wsAxis: {x: 1, y: 0, z: 0}
+  rotationSpeed: 100
+  wsAxis: {x: 0, y: 0, z: 1}
   adAxis: {x: 0, y: 1, z: 0}
 --- !u!1 &6766441239349249528
 GameObject:
