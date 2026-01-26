@@ -47,7 +47,21 @@ public class ConnectionManager : NetworkBehaviour
         }
         else
         {
-            // エディタまたは通常のPC向けビルド
+            // エディタ接続ロジック
+#if UNITY_EDITOR
+            // ParrelSyncによる判定
+            if (ParrelSync.ClonesManager.IsClone())
+            {
+                Debug.Log("[Boot] Starting as Client (Clone Instance)...");
+                NetworkManager.Singleton.StartClient();
+            }
+            else
+            {
+                Debug.Log("[Boot] Starting as Host (Original Instance)...");
+                NetworkManager.Singleton.StartHost();
+            }
+#else
+            // スタンドアロン / 通常ビルド
             if (autoStartClientInEditor)
             {
                 Debug.Log("[Boot] Starting as Client...");
@@ -58,6 +72,7 @@ public class ConnectionManager : NetworkBehaviour
                 Debug.Log("[Boot] Starting as Host...");
                 NetworkManager.Singleton.StartHost();
             }
+#endif
         }
     }
 }

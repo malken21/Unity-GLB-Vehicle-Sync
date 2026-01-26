@@ -133,6 +133,10 @@ public class Avatar : NetworkBehaviour
         public string url;
     }
 
+    private GameObject modelContainer;
+
+    [SerializeField] private Transform customModelParent; // User specified parent
+
     public async Task LoadAvatar(string url)
     {
         var gltf = new GltfImport();
@@ -140,7 +144,56 @@ public class Avatar : NetworkBehaviour
 
         if (success)
         {
-            await gltf.InstantiateMainSceneAsync(transform);
+            // Clean up previous container
+            if (modelContainer != null)
+            {
+                Destroy(modelContainer);
+            }
+            
+            // Create a new container for the model
+            modelContainer = new GameObject("ModelContainer");
+
+            // Set parent based on configuration
+            if (customModelParent != null)
+            {
+                modelContainer.transform.SetParent(customModelParent, false);
+            }
+            else
+            {
+                modelContainer.transform.SetParent(transform, false);
+            }
+
+            // Instantiate into the container
+            await gltf.InstantiateMainSceneAsync(modelContainer.transform);
+            
+            // Adjust position so the bottom of the mesh is at the origin (pivot) of the container
+            Bounds bounds = new Bounds(modelContainer.transform.position, Vector3.zero);
+            bool hasBounds = false;
+            
+            // Calculate bounds from renderers inside the container
+            foreach (var renderer in modelContainer.GetComponentsInChildren<Renderer>())
+            {
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+            }
+
+            if (hasBounds)
+            {
+                float currentMinY = bounds.min.y;
+                float targetY = modelContainer.transform.position.y;
+                float shiftY = targetY - currentMinY;
+
+                // Move the container to adjust height
+                modelContainer.transform.position += new Vector3(0, shiftY, 0);
+            }
+
             Debug.Log($"Avatar loaded successfully from {url}");
         }
         else
