@@ -39,56 +39,75 @@ public class ConnectionManager : NetworkBehaviour
 
     void Start()
     {
-        // 環境変数を確認
-        string envMode = System.Environment.GetEnvironmentVariable("VEHICLE_SYNC_MODE");
+        // コマンドライン引数を取得
+        string[] args = System.Environment.GetCommandLineArgs();
         
-        if (!string.IsNullOrEmpty(envMode))
+        string cliMode = null;
+        string cliPort = null;
+        string cliAssetUrl = null;
+        string cliServerIp = null;
+
+        // 引数の解析
+        for (int i = 0; i < args.Length; i++)
         {
-            Debug.Log($"[Boot] Environment Config Detected: Mode={envMode}");
+            if (args[i] == "-mode" && i + 1 < args.Length)
+            {
+                cliMode = args[i + 1];
+            }
+            else if (args[i] == "-port" && i + 1 < args.Length)
+            {
+                cliPort = args[i + 1];
+            }
+            else if (args[i] == "-assetUrl" && i + 1 < args.Length)
+            {
+                cliAssetUrl = args[i + 1];
+            }
+            else if (args[i] == "-serverIp" && i + 1 < args.Length)
+            {
+                cliServerIp = args[i + 1];
+            }
+        }
+
+        if (!string.IsNullOrEmpty(cliMode))
+        {
+            Debug.Log($"[Boot] Command Line Config Detected: Mode={cliMode}");
             var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
             
             // ポート設定の読み込み
-            string envPort = System.Environment.GetEnvironmentVariable("VEHICLE_SYNC_PORT");
             ushort port = 7777; // Default
-            if (!string.IsNullOrEmpty(envPort) && ushort.TryParse(envPort, out ushort parsedPort))
+            if (!string.IsNullOrEmpty(cliPort) && ushort.TryParse(cliPort, out ushort parsedPort))
             {
                 port = parsedPort;
             }
 
-            if (envMode.ToUpper() == "HOST")
+            if (cliMode.ToUpper() == "HOST")
             {
                 // HOST モード
-                string envAssetUrl = System.Environment.GetEnvironmentVariable("VEHICLE_SYNC_ASSET_URL");
-                if (!string.IsNullOrEmpty(envAssetUrl))
+                if (!string.IsNullOrEmpty(cliAssetUrl))
                 {
-                    Debug.Log($"[Boot] Asset Server URL set to: {envAssetUrl}");
-                    _serverUrl.Value = new FixedString512Bytes(envAssetUrl);
+                    Debug.Log($"[Boot] Asset Server URL set to: {cliAssetUrl}");
+                    _serverUrl.Value = new FixedString512Bytes(cliAssetUrl);
                 }
 
-                // UnityTransportの設定 (Hostは自分自身のバインドのため、通常は "0.0.0.0" またはそのままでポートだけ設定することが多いが、
-                // SetConnectionData の第一引数は Address なので、Listenする場合は "0.0.0.0" でよい)
-                // しかし、UnityTransportのデフォルト実装では StartHost 時に ConnectionData がローカルアドレスに使われることがある。
-                // 安全のため、既に設定されているアドレス(デフォルト)を維持しつつポートだけ変えるか、
-                // 明示的に "0.0.0.0" を指定する。
-                // ここでは "0.0.0.0" (Any) を指定し、ポートを設定。
+                // UnityTransportの設定
                 transport.SetConnectionData("0.0.0.0", port);
                 
                 Debug.Log($"[Boot] Starting as Host on Port {port}...");
                 NetworkManager.Singleton.StartHost();
                 return;
             }
-            else if (envMode.ToUpper() == "CLIENT")
+            else if (cliMode.ToUpper() == "CLIENT")
             {
                 // CLIENT モード
-                string envIp = System.Environment.GetEnvironmentVariable("VEHICLE_SYNC_SERVER_IP");
-                if (string.IsNullOrEmpty(envIp))
+                string targetIp = "127.0.0.1"; // Default
+                if (!string.IsNullOrEmpty(cliServerIp))
                 {
-                    envIp = "127.0.0.1"; // Default fall back
+                    targetIp = cliServerIp;
                 }
 
-                transport.SetConnectionData(envIp, port);
+                transport.SetConnectionData(targetIp, port);
 
-                Debug.Log($"[Boot] Starting as Client connecting to {envIp}:{port}...");
+                Debug.Log($"[Boot] Starting as Client connecting to {targetIp}:{port}...");
                 NetworkManager.Singleton.StartClient();
                 return;
             }
