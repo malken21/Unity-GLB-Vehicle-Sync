@@ -29,6 +29,35 @@ public class Avatar : NetworkBehaviour
 
         if (IsOwner)
         {
+            // Camera tracking logic
+            if (Camera.main != null)
+            {
+                var cameraTransform = Camera.main.transform;
+                
+                // Find or create "Horiz" child for stable camera tracking
+                var horizTransform = transform.Find("Horiz");
+                if (horizTransform == null)
+                {
+                    var horizGO = new GameObject("Horiz");
+                    horizTransform = horizGO.transform;
+                    horizTransform.SetParent(transform, false);
+                    horizGO.AddComponent<KeepHoriz>();
+                    Debug.Log("[Avatar] Created 'Horiz' child with KeepHoriz script.");
+                }
+
+                cameraTransform.SetParent(horizTransform);
+                // Adjust position behind and slightly above the avatar
+                // User reported side view with previous settings, implying model faces X-axis.
+                // Moving camera to -X to look at the back of an X-forward model.
+                cameraTransform.localPosition = new Vector3(8f, 3f, 0f); 
+                cameraTransform.localRotation = Quaternion.Euler(0f, -90f, 0f);
+                Debug.Log($"[Avatar] Main Camera attached to {horizTransform.name} with X-axis alignment.");
+            }
+            else
+            {
+                 Debug.LogWarning("[Avatar] Main Camera not found!");
+            }
+
             // Execute on main thread
             var filePath = WindowsFileDialog.Open("GLB Files (*.glb)|*.glb", "Select Avatar");
             if (!string.IsNullOrEmpty(filePath))
