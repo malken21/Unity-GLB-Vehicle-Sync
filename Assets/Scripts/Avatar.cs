@@ -15,10 +15,14 @@ public class Avatar : NetworkBehaviour
     // Stores the avatar URL synchronized across the network
     private readonly NetworkVariable<FixedString512Bytes> avatarUrlNetwork = new NetworkVariable<FixedString512Bytes>();
 
+    private Vector3 initialPosition;
+
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
         
+        initialPosition = transform.position;
+
         avatarUrlNetwork.OnValueChanged += OnAvatarUrlChanged;
 
         // If there's already a URL set when we spawn (e.g. late join), load it
@@ -244,5 +248,27 @@ public class Avatar : NetworkBehaviour
         {
             Debug.LogError($"Loading avatar failed from {url}");
         }
+    }
+
+    private void Update()
+    {
+        if (IsOwner)
+        {
+            if (transform.position.y <= -100f)
+            {
+                Respawn();
+            }
+        }
+    }
+
+    private void Respawn()
+    {
+        transform.position = initialPosition;
+        if (TryGetComponent<Rigidbody>(out var rb))
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+        Debug.Log("[Avatar] Respawned due to falling below -100Y.");
     }
 }
