@@ -30,6 +30,31 @@
 5. 任意の場所をクリック（または実装されている場合はUIプロンプトに従って）して、`.glb` ファイルを選択します。
 6. ファイルがアップロードされ、3Dモデルが接続されているすべてのクライアントに表示されます。
 
+## 起動オプション (コマンドライン引数)
+
+ビルドした実行ファイルは、コマンドライン引数を使用して起動モードや接続先を設定できます。
+
+| 引数 | 値 | 説明 |
+| :--- | :--- | :--- |
+| `-mode` | `HOST` または `CLIENT` | 起動モードを指定します。 |
+| `-port` | 数値 (例: `7777`) | 使用するポート番号。 |
+| `-assetUrl` | URL文字列 | **Hostモード用**。アセットサーバーのベースURL。 |
+| `-serverIp` | IPアドレス | **Clientモード用**。接続先ゲームサーバーのIPアドレス。 |
+
+### 使用例
+
+**ホストとして起動 (PowerShell):**
+
+```powershell
+./Unity-GLB-Vehicle-Sync.exe -mode HOST -port 7777 -assetUrl "http://assets.example.com"
+```
+
+**クライアントとして起動 (PowerShell):**
+
+```powershell
+./Unity-GLB-Vehicle-Sync.exe -mode CLIENT -port 7777 -serverIp "192.168.1.10"
+```
+
 ## ビルド
 
 ### ローカルビルド
