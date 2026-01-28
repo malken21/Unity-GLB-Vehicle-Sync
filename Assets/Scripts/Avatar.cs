@@ -15,10 +15,14 @@ public class Avatar : NetworkBehaviour
     // Stores the avatar URL synchronized across the network
     private readonly NetworkVariable<FixedString512Bytes> avatarUrlNetwork = new NetworkVariable<FixedString512Bytes>();
 
+    private Vector3 initialPosition;
+
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
         
+        initialPosition = transform.position;
+
         avatarUrlNetwork.OnValueChanged += OnAvatarUrlChanged;
 
         // If there's already a URL set when we spawn (e.g. late join), load it
@@ -29,22 +33,72 @@ public class Avatar : NetworkBehaviour
 
         if (IsOwner)
         {
-            // Execute on main thread
-            var filePath = WindowsFileDialog.Open("GLB Files (*.glb)|*.glb", "Select Avatar");
-            if (!string.IsNullOrEmpty(filePath))
+            if (ConnectionManager.Instance.summonAvatar)
             {
-                StartCoroutine(UploadAndLoad(filePath));
+                // Camera tracking logic
+                if (Camera.main != null)
+                {
+                    var cameraTransform = Camera.main.transform;
+                    
+                    // Find or create "Horiz" child for stable camera tracking
+                    var horizTransform = transform.Find("Horiz");
+                    if (horizTransform == null)
+                    {
+                        var horizGO = new GameObject("Horiz");
+                        horizTransform = horizGO.transform;
+                        horizTransform.SetParent(transform, false);
+                        horizGO.AddComponent<KeepHoriz>();
+                        Debug.Log("[Avatar] Created 'Horiz' child with KeepHoriz script.");
+                    }
+
+                    cameraTransform.SetParent(horizTransform);
+                    // Adjust position behind and slightly above the avatar
+                    // User reported side view with previous settings, implying model faces X-axis.
+                    // Moving camera to -X to look at the back of an X-forward model.
+                    cameraTransform.localPosition = new Vector3(8f, 3f, 0f); 
+                    cameraTransform.localRotation = Quaternion.Euler(0f, -90f, 0f);
+                    Debug.Log($"[Avatar] Main Camera attached to {horizTransform.name} with X-axis alignment.");
+                }
+                else
+                {
+                     Debug.LogWarning("[Avatar] Main Camera not found!");
+                }
+
+                // Execute on main thread
+                var filePath = WindowsFileDialog.Open("GLB Files (*.glb)|*.glb", "Select Avatar");
+                if (!string.IsNullOrEmpty(filePath))
+                {
+                    StartCoroutine(UploadAndLoad(filePath));
+                }
+                else
+                {
+                    // Fallback or do nothing
+                    Debug.Log("No file selected, loading default.");
+                    // For default, we also need to sync it if we want others to see it, 
+                    // but usually default is a placeholder. attempt to sync default if needed.
+                    // For now, let's just sync the default URL if nothing selected.
+                    // Actually, let's stick to the previous logic but via RPC
+                     SetAvatarUrlServerRpc(ConnectionManager.Instance.serverUrl + "/default"); // Simplified for now, assuming server handles it or just empty
+                }
             }
             else
             {
-                // Fallback or do nothing
-                Debug.Log("No file selected, loading default.");
-                // For default, we also need to sync it if we want others to see it, 
-                // but usually default is a placeholder. attempt to sync default if needed.
-                // For now, let's just sync the default URL if nothing selected.
-                SetAvatarUrlServerRpc(ConnectionManager.Instance.serverUrl + "/default_avatar.glb"); // Example fallback or just keep local if intended.
-                // Actually, let's stick to the previous logic but via RPC
-                 SetAvatarUrlServerRpc(ConnectionManager.Instance.serverUrl + "/default"); // Simplified for now, assuming server handles it or just empty
+                // Overhead view mode
+                Debug.Log("[Avatar] Summoning disabled via command line argument. Entering Overhead View Mode.");
+
+                if (Camera.main != null)
+                {
+                    var cameraTransform = Camera.main.transform;
+                    cameraTransform.SetParent(null);
+                    cameraTransform.position = new Vector3(0f, 50f, 0f);
+                    cameraTransform.rotation = Quaternion.Euler(90f, 0f, 0f);
+                }
+
+                var rotator = GetComponent<KeyboardRotator>();
+                if (rotator != null)
+                {
+                    rotator.enabled = false;
+                }
             }
         }
         else
@@ -194,5 +248,27 @@ public class Avatar : NetworkBehaviour
         {
             Debug.LogError($"Loading avatar failed from {url}");
         }
+    }
+
+    private void Update()
+    {
+        if (IsOwner)
+        {
+            if (transform.position.y <= -100f)
+            {
+                Respawn();
+            }
+        }
+    }
+
+    private void Respawn()
+    {
+        transform.position = initialPosition;
+        if (TryGetComponent<Rigidbody>(out var rb))
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+        Debug.Log("[Avatar] Respawned due to falling below -100Y.");
     }
 }

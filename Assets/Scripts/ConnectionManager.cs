@@ -11,6 +11,7 @@ public class ConnectionManager : NetworkBehaviour
     [Header("Development Settings")]
     [SerializeField] private string initialServerUrl = "http://localhost:3000";
     public bool autoStartClientInEditor = true;
+    public bool summonAvatar = true;
 
     private NetworkVariable<FixedString512Bytes> _serverUrl = new NetworkVariable<FixedString512Bytes>();
 
@@ -46,6 +47,7 @@ public class ConnectionManager : NetworkBehaviour
         string cliPort = null;
         string cliAssetUrl = null;
         string cliServerIp = null;
+        string cliSummonAvatar = null;
 
         // 引数の解析
         for (int i = 0; i < args.Length; i++)
@@ -66,6 +68,16 @@ public class ConnectionManager : NetworkBehaviour
             {
                 cliServerIp = args[i + 1];
             }
+            else if (args[i] == "-summonAvatar" && i + 1 < args.Length)
+            {
+                cliSummonAvatar = args[i + 1];
+            }
+        }
+        
+        if (!string.IsNullOrEmpty(cliSummonAvatar) && bool.TryParse(cliSummonAvatar, out bool parsedSummonAvatar))
+        {
+            summonAvatar = parsedSummonAvatar;
+            Debug.Log($"[Boot] Summon Avatar set to: {summonAvatar}");
         }
 
         if (!string.IsNullOrEmpty(cliMode))
@@ -131,21 +143,24 @@ public class ConnectionManager : NetworkBehaviour
             }
             else
             {
-                Debug.Log("[Boot] Starting as Host (Original Instance)...");
-                NetworkManager.Singleton.StartHost();
+                Debug.Log($"[Boot] Starting as Host (Original Instance)...");
+                if (autoStartClientInEditor)
+                {
+                    Debug.Log("[Boot] autoStartClientInEditor is TRUE -> Starting as Client...");
+                    NetworkManager.Singleton.StartClient();
+                }
+                else
+                {
+                    Debug.Log("[Boot] autoStartClientInEditor is FALSE -> Starting as Host...");
+                    NetworkManager.Singleton.StartHost();
+                }
             }
 #else
             // スタンドアロン / 通常ビルド
-            if (autoStartClientInEditor)
-            {
-                Debug.Log("[Boot] Starting as Client...");
-                NetworkManager.Singleton.StartClient();
-            }
-            else
-            {
-                Debug.Log("[Boot] Starting as Host...");
-                NetworkManager.Singleton.StartHost();
-            }
+            // スタンドアロン / 通常ビルド
+            // デフォルトはクライアントとして起動 (サーバーとして起動したい場合は -mode HOST を指定)
+            Debug.Log("[Boot] Starting as Client (Default for Standalone)...");
+            NetworkManager.Singleton.StartClient();
 #endif
         }
     }
