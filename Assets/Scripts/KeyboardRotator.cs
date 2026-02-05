@@ -22,12 +22,19 @@ public class KeyboardRotator : MonoBehaviour
     [Tooltip("A/Dキー入力時の回転軸（ローカル座標系）。デフォルトはY軸（右旋回・左旋回）。横転させたい場合は(0, 0, -1)などに設定してください。")]
     [SerializeField] private Vector3 adAxis = Vector3.up;
 
-    [Header("Resistance Settings")]
-    [Tooltip("回転速度に比例する抵抗係数。値が大きいほど高速回転時の抵抗が強くなります。")]
-    [SerializeField] private float resistanceCoefficient = 1.5f;
+    [Header("Resistance Settings (PID)")]
+    [Tooltip("Proportional Gain: 回転速度に対する抵抗力（P制御）。動きを止めようとする基本的な力。")]
+    [SerializeField] private float pGain = 1.0f;
 
-    [Tooltip("最小抵抗値。回転している限り常に発生する抵抗のベース値です。")]
-    [SerializeField] private float minResistance = 0.05f;
+    [Tooltip("Integral Gain: 蓄積された回転に対する補正力（I制御）。定常的な回転を抑える力。")]
+    [SerializeField] private float iGain = 0.0f;
+
+    [Tooltip("Derivative Gain: 回転速度の変化に対する抵抗力（D制御）。急激な速度変化を抑制する力。")]
+    [SerializeField] private float dGain = 0.1f;
+
+    // PID制御用変数
+    private Vector3 integralError;
+    private Vector3 lastError;
 
     private void Start()
     {
@@ -68,25 +75,36 @@ public class KeyboardRotator : MonoBehaviour
             targetRigidbody.AddTorque(torque, ForceMode.Force);
         }
 
-        // 回転抵抗の適用 (回転速度が速いほど抵抗が大きくなる)
+        // 回転抵抗の適用 (PID制御)
         if (targetRigidbody != null)
         {
-            Vector3 angularVel = targetRigidbody.angularVelocity;
-            float sqrMag = angularVel.sqrMagnitude;
+            Vector3 currentAngularVelocity = targetRigidbody.angularVelocity;
             
-            // 完全に停止していない場合のみ抵抗をかける
-            if (sqrMag > 0.0001f)
-            {
-                float speed = Mathf.Sqrt(sqrMag);
-                // 抵抗の強さ = 最小抵抗 + (速度 * 係数)
-                float resistanceMagnitude = minResistance + (speed * resistanceCoefficient);
-                
-                // 回転方向の逆向きにトルクをかける
-                // angularVelはワールド座標系
-                Vector3 resistanceTorque = -angularVel.normalized * resistanceMagnitude;
-                
-                targetRigidbody.AddTorque(resistanceTorque, ForceMode.Force);
-            }
+            // 目標角速度は常にゼロ（停止状態）
+            Vector3 targetAngularVelocity = Vector3.zero;
+            
+            // 誤差計算 (目標 - 現在)
+            // 例: 右回転(正)している場合、誤差は負になり、左回転(負)のトルクが発生してブレーキとなる
+            Vector3 error = targetAngularVelocity - currentAngularVelocity;
+            
+            // P項 (比例)
+            Vector3 p = error * pGain;
+            
+            // I項 (積分)
+            integralError += error * Time.fixedDeltaTime;
+            Vector3 i = integralError * iGain;
+            
+            // D項 (微分)
+            Vector3 d = (error - lastError) / Time.fixedDeltaTime;
+            Vector3 derivative = d * dGain;
+            
+            // PID出力（抵抗トルク）
+            Vector3 resistanceTorque = p + i + derivative;
+            
+            targetRigidbody.AddTorque(resistanceTorque, ForceMode.Force);
+            
+            // 次回用に誤差を保存
+            lastError = error;
         }
 
         // A/Dキー: 直接回転（Transform.Rotate）
