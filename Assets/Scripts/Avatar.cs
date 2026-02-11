@@ -188,7 +188,12 @@ public class Avatar : NetworkBehaviour
     public async Task LoadAvatar(string url)
     {
         var gltf = new GltfImport();
-        var success = await gltf.Load(url);
+        var settings = new ImportSettings
+        {
+            generateMipMaps = true,
+            anisotropicFilterLevel = 3
+        };
+        var success = await gltf.Load(url, settings);
 
         if (success)
         {
