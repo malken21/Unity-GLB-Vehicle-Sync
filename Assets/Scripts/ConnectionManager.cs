@@ -10,25 +10,18 @@ public class ConnectionManager : NetworkBehaviour
 
     [Header("Development Settings")]
     [SerializeField] private string initialServerUrl = "http://localhost:3000";
-    [SerializeField] private string initialEnvironmentUrl = "";
     public bool autoStartClientInEditor = true;
     public bool summonAvatar = true;
 
     private NetworkVariable<FixedString512Bytes> _serverUrl = new NetworkVariable<FixedString512Bytes>();
-    private NetworkVariable<FixedString512Bytes> _environmentUrl = new NetworkVariable<FixedString512Bytes>();
 
     public string serverUrl => _serverUrl.Value.IsEmpty ? initialServerUrl : _serverUrl.Value.ToString();
-    public string environmentUrl => _environmentUrl.Value.IsEmpty ? initialEnvironmentUrl : _environmentUrl.Value.ToString();
 
     public override void OnNetworkSpawn()
     {
         if (IsServer)
         {
             _serverUrl.Value = new FixedString512Bytes(initialServerUrl);
-            if (!string.IsNullOrEmpty(initialEnvironmentUrl))
-            {
-                _environmentUrl.Value = new FixedString512Bytes(initialEnvironmentUrl);
-            }
         }
     }
 
@@ -53,7 +46,6 @@ public class ConnectionManager : NetworkBehaviour
         string cliMode = null;
         string cliPort = null;
         string cliAssetUrl = null;
-        string cliEnvironmentUrl = null;
         string cliServerIp = null;
         string cliSummonAvatar = null;
 
@@ -71,10 +63,6 @@ public class ConnectionManager : NetworkBehaviour
             else if (args[i] == "-assetUrl" && i + 1 < args.Length)
             {
                 cliAssetUrl = args[i + 1];
-            }
-            else if (args[i] == "-envUrl" && i + 1 < args.Length)
-            {
-                cliEnvironmentUrl = args[i + 1];
             }
             else if (args[i] == "-serverIp" && i + 1 < args.Length)
             {
@@ -111,12 +99,6 @@ public class ConnectionManager : NetworkBehaviour
                 {
                     Debug.Log($"[Boot] Asset Server URL set to: {cliAssetUrl}");
                     _serverUrl.Value = new FixedString512Bytes(cliAssetUrl);
-                }
-
-                if (!string.IsNullOrEmpty(cliEnvironmentUrl))
-                {
-                    Debug.Log($"[Boot] Environment URL set to: {cliEnvironmentUrl}");
-                    _environmentUrl.Value = new FixedString512Bytes(cliEnvironmentUrl);
                 }
 
                 // UnityTransportの設定
