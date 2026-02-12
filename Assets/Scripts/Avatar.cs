@@ -16,6 +16,9 @@ public class Avatar : NetworkBehaviour
     private readonly NetworkVariable<FixedString512Bytes> avatarUrlNetwork = new NetworkVariable<FixedString512Bytes>();
     private readonly NetworkVariable<float> modelScaleNetwork = new NetworkVariable<float>(1.0f);
     private readonly NetworkVariable<float> modelRotationYNetwork = new NetworkVariable<float>(0.0f);
+    
+    // アバターの可視性を同期します
+    private readonly NetworkVariable<bool> isVisibleNetwork = new NetworkVariable<bool>(true);
 
     private Vector3 initialPosition;
 
@@ -28,12 +31,16 @@ public class Avatar : NetworkBehaviour
         avatarUrlNetwork.OnValueChanged += OnAvatarUrlChanged;
         modelScaleNetwork.OnValueChanged += OnModelTransformChanged;
         modelRotationYNetwork.OnValueChanged += OnModelTransformChanged;
+        isVisibleNetwork.OnValueChanged += OnVisibilityChanged;
 
         // スポーン時にすでにURLが設定されている場合（例：途中参加）、それを読み込みます
         if (!avatarUrlNetwork.Value.IsEmpty)
         {
             _ = LoadAvatar(avatarUrlNetwork.Value.ToString());
         }
+
+        // 初期可視性の適用
+        UpdateVisibility(isVisibleNetwork.Value);
 
         if (IsOwner)
         {
@@ -90,18 +97,12 @@ public class Avatar : NetworkBehaviour
                 // 俯瞰（オーバーヘッド）ビューモード
                 Debug.Log("[Avatar] Summoning disabled via command line argument. Entering Overhead View Mode.");
 
-                // 観戦者のボールを隠すためにレンダラーとコライダーを無効にします
-                foreach (var r in GetComponentsInChildren<Renderer>())
-                {
-                    r.enabled = false;
-                }
-                foreach (var c in GetComponentsInChildren<Collider>())
-                {
-                    c.enabled = false;
-                }
+                // サーバーに不可視状態を通知します
+                SetVisibilityServerRpc(false);
 
                 if (Camera.main != null)
                 {
+                    // カメラのみ操作し、レンダラーなどはNetworkVariableの変更で処理されます
                     var cameraTransform = Camera.main.transform;
                     // cameraTransform.SetParent(null);
                     // cameraTransform.position = new Vector3(0f, 50f, 0f);
@@ -139,6 +140,24 @@ public class Avatar : NetworkBehaviour
         UpdateModelTransform();
     }
 
+    private void OnVisibilityChanged(bool previousValue, bool newValue)
+    {
+        UpdateVisibility(newValue);
+    }
+
+    private void UpdateVisibility(bool isVisible)
+    {
+        foreach (var r in GetComponentsInChildren<Renderer>(true)) // include inactive incase they were disabled
+        {
+            r.enabled = isVisible;
+        }
+        foreach (var c in GetComponentsInChildren<Collider>(true))
+        {
+            c.enabled = isVisible;
+        }
+        Debug.Log($"[Avatar] Visibility updated to: {isVisible}");
+    }
+
     private void UpdateModelTransform()
     {
         if (modelContainer != null)
@@ -159,6 +178,12 @@ public class Avatar : NetworkBehaviour
     {
         modelScaleNetwork.Value = scale;
         modelRotationYNetwork.Value = rotationY;
+    }
+
+    [ServerRpc]
+    private void SetVisibilityServerRpc(bool isVisible)
+    {
+        isVisibleNetwork.Value = isVisible;
     }
 
     IEnumerator UploadAndLoad(string filePath)
@@ -282,6 +307,9 @@ public class Avatar : NetworkBehaviour
 
             // 初期のネットワーク変換を適用します
             UpdateModelTransform();
+
+            // 読み込み完了後に現在の可視性設定を適用します
+            UpdateVisibility(isVisibleNetwork.Value);
 
             Debug.Log($"Avatar loaded successfully from {url}");
         }
