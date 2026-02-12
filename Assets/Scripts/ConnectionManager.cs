@@ -22,8 +22,38 @@ public class ConnectionManager : NetworkBehaviour
     {
         if (IsServer)
         {
-            _serverUrl.Value = new FixedString512Bytes(initialServerUrl);
+            string url = initialServerUrl;
+            if (url.Contains("localhost"))
+            {
+                string ip = GetLocalIPAddress();
+                if (!string.IsNullOrEmpty(ip))
+                {
+                    url = url.Replace("localhost", ip);
+                    Debug.Log($"[ConnectionManager] Replaced localhost with {ip} -> {url}");
+                }
+            }
+            _serverUrl.Value = new FixedString512Bytes(url);
         }
+    }
+
+    private string GetLocalIPAddress()
+    {
+        try
+        {
+            var host = System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName());
+            foreach (var ip in host.AddressList)
+            {
+                if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                {
+                    return ip.ToString();
+                }
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[ConnectionManager] Failed to get local IP address: {e.Message}");
+        }
+        return "127.0.0.1";
     }
 
     private void Awake()
