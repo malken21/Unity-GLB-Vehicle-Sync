@@ -90,6 +90,16 @@ public class Avatar : NetworkBehaviour
                 // Overhead view mode
                 Debug.Log("[Avatar] Summoning disabled via command line argument. Entering Overhead View Mode.");
 
+                // Disable Renderers and Colliders to hide the spectator ball
+                foreach (var r in GetComponentsInChildren<Renderer>())
+                {
+                    r.enabled = false;
+                }
+                foreach (var c in GetComponentsInChildren<Collider>())
+                {
+                    c.enabled = false;
+                }
+
                 if (Camera.main != null)
                 {
                     var cameraTransform = Camera.main.transform;
