@@ -271,19 +271,24 @@ public class Avatar : NetworkBehaviour
                 {
                     modelContainer.transform.SetParent(transform, false);
                 }
+                
+                // ジオメトリ用のサブコンテナを作成します（ピボット調整用）
+                GameObject geometryContainer = new GameObject("GeometryContainer");
+                geometryContainer.transform.SetParent(modelContainer.transform, false);
 
-                // コンテナ内にインスタンス化します
-                await gltf.InstantiateMainSceneAsync(modelContainer.transform);
+                // サブコンテナ内にインスタンス化します
+                await gltf.InstantiateMainSceneAsync(geometryContainer.transform);
                 
                 // 不足しているマテリアルにシェーダーのフォールバックを適用します
-                ApplyShaderFallback(modelContainer);
+                ApplyShaderFallback(geometryContainer);
 
                 // メッシュの底面がコンテナの原点（ピボット）に来るように位置を調整します
-                Bounds bounds = new Bounds(modelContainer.transform.position, Vector3.zero);
+                // 調整は geometryContainer に対して行い、modelContainer は原点のままにします
+                Bounds bounds = new Bounds(geometryContainer.transform.position, Vector3.zero);
                 bool hasBounds = false;
                 
                 // コンテナ内のレンダラーから境界（Bounds）を計算します
-                foreach (var renderer in modelContainer.GetComponentsInChildren<Renderer>())
+                foreach (var renderer in geometryContainer.GetComponentsInChildren<Renderer>())
                 {
                     if (!hasBounds)
                     {
@@ -299,14 +304,15 @@ public class Avatar : NetworkBehaviour
                 if (hasBounds)
                 {
                     float currentMinY = bounds.min.y;
+                    // modelContainerの位置（原点）を基準にします
                     float targetY = modelContainer.transform.position.y;
                     float shiftY = targetY - currentMinY;
 
-                    // 高さを調整するためにコンテナを移動します
-                    modelContainer.transform.position += new Vector3(0, shiftY, 0);
+                    // 高さを調整するためにジオメトリコンテナを移動します
+                    geometryContainer.transform.position += new Vector3(0, shiftY, 0);
                 }
 
-                // 初期のネットワーク変換を適用します
+                // 初期のネットワーク変換を適用します（modelContainerに対して適用されます）
                 UpdateModelTransform();
 
                 // 読み込み完了後に現在の可視性設定を適用します
@@ -344,7 +350,7 @@ public class Avatar : NetworkBehaviour
 
             for (int i = 0; i < materials.Length; i++)
             {
-                if (materials[i] == null || materials[i].shader == null || materials[i].shader.name == "Hidden/InternalErrorShader" || materials[i].shader.name == "")
+                if (materials[i] == null || materials[i].shader == null || materials[i].shader.name == "Hidden/InternalErrorShader" || materials[i].shader.name == "" || materials[i].shader.name.Contains("glTF"))
                 {
                     Debug.Log($"[Avatar] フォールバックシェーダーを適用中: {renderer.name} 実行インデックス {i}");
                     
