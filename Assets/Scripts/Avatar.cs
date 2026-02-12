@@ -214,6 +214,9 @@ public class Avatar : NetworkBehaviour
             // Instantiate into the container
             await gltf.InstantiateMainSceneAsync(modelContainer.transform);
             
+            // Apply shader fallback for missing materials
+            ApplyShaderFallback(modelContainer);
+
             // Adjust position so the bottom of the mesh is at the origin (pivot) of the container
             Bounds bounds = new Bounds(modelContainer.transform.position, Vector3.zero);
             bool hasBounds = false;
@@ -247,6 +250,45 @@ public class Avatar : NetworkBehaviour
         else
         {
             Debug.LogError($"Loading avatar failed from {url}");
+        }
+    }
+
+    private void ApplyShaderFallback(GameObject container)
+    {
+        Shader fallbackShader = Shader.Find("Universal Render Pipeline/Lit");
+        if (fallbackShader == null)
+        {
+            Debug.LogWarning("[Avatar] Fallback shader 'Universal Render Pipeline/Lit' not found. Using default 'Standard' as a last resort.");
+            fallbackShader = Shader.Find("Standard");
+        }
+
+        if (fallbackShader == null)
+        {
+            Debug.LogError("[Avatar] No suitable fallback shader found.");
+            return;
+        }
+
+        Renderer[] renderers = container.GetComponentsInChildren<Renderer>(true);
+        foreach (Renderer renderer in renderers)
+        {
+            Material[] materials = renderer.sharedMaterials;
+            bool modified = false;
+
+            for (int i = 0; i < materials.Length; i++)
+            {
+                // If material is null or using the internal error shader (pink color)
+                if (materials[i] == null || materials[i].shader == null || materials[i].shader.name == "Hidden/InternalErrorShader")
+                {
+                    Debug.Log($"[Avatar] Applying fallback shader to {renderer.name} execution index {i}");
+                    materials[i] = new Material(fallbackShader);
+                    modified = true;
+                }
+            }
+
+            if (modified)
+            {
+                renderer.sharedMaterials = materials;
+            }
         }
     }
 
