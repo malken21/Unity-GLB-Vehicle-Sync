@@ -14,6 +14,8 @@ public class Avatar : NetworkBehaviour
 
     // Stores the avatar URL synchronized across the network
     private readonly NetworkVariable<FixedString512Bytes> avatarUrlNetwork = new NetworkVariable<FixedString512Bytes>();
+    private readonly NetworkVariable<float> modelScaleNetwork = new NetworkVariable<float>(1.0f);
+    private readonly NetworkVariable<float> modelRotationYNetwork = new NetworkVariable<float>(0.0f);
 
     private Vector3 initialPosition;
 
@@ -24,6 +26,8 @@ public class Avatar : NetworkBehaviour
         initialPosition = transform.position;
 
         avatarUrlNetwork.OnValueChanged += OnAvatarUrlChanged;
+        modelScaleNetwork.OnValueChanged += OnModelTransformChanged;
+        modelRotationYNetwork.OnValueChanged += OnModelTransformChanged;
 
         // If there's already a URL set when we spawn (e.g. late join), load it
         if (!avatarUrlNetwork.Value.IsEmpty)
@@ -120,10 +124,31 @@ public class Avatar : NetworkBehaviour
         }
     }
 
+    private void OnModelTransformChanged(float previousValue, float newValue)
+    {
+        UpdateModelTransform();
+    }
+
+    private void UpdateModelTransform()
+    {
+        if (modelContainer != null)
+        {
+            modelContainer.transform.localScale = Vector3.one * modelScaleNetwork.Value;
+            modelContainer.transform.localRotation = Quaternion.Euler(0, modelRotationYNetwork.Value, 0);
+        }
+    }
+
     [ServerRpc]
     private void SetAvatarUrlServerRpc(string url)
     {
         avatarUrlNetwork.Value = new FixedString512Bytes(url);
+    }
+
+    [ServerRpc]
+    private void UpdateModelTransformServerRpc(float scale, float rotationY)
+    {
+        modelScaleNetwork.Value = scale;
+        modelRotationYNetwork.Value = rotationY;
     }
 
     IEnumerator UploadAndLoad(string filePath)
@@ -245,6 +270,9 @@ public class Avatar : NetworkBehaviour
                 modelContainer.transform.position += new Vector3(0, shiftY, 0);
             }
 
+            // Apply initial networked transform
+            UpdateModelTransform();
+
             Debug.Log($"Avatar loaded successfully from {url}");
         }
         else
@@ -296,10 +324,52 @@ public class Avatar : NetworkBehaviour
     {
         if (IsOwner)
         {
+            // Arrow key controls for scale (Up/Down) and rotation (Left/Right)
+            HandleManualAdjustments();
+
             if (transform.position.y <= -100f)
             {
                 Respawn();
             }
+        }
+    }
+
+    private void HandleManualAdjustments()
+    {
+        if (UnityEngine.InputSystem.Keyboard.current == null) return;
+
+        bool changed = false;
+        float currentScale = modelScaleNetwork.Value;
+        float currentRotationY = modelRotationYNetwork.Value;
+
+        // Scale: Up Arrow (Increase), Down Arrow (Decrease)
+        if (UnityEngine.InputSystem.Keyboard.current.upArrowKey.isPressed)
+        {
+            currentScale += 0.5f * Time.deltaTime;
+            changed = true;
+        }
+        if (UnityEngine.InputSystem.Keyboard.current.downArrowKey.isPressed)
+        {
+            currentScale -= 0.5f * Time.deltaTime;
+            if (currentScale < 0.1f) currentScale = 0.1f;
+            changed = true;
+        }
+
+        // Rotation: Left Arrow (CCW), Right Arrow (CW)
+        if (UnityEngine.InputSystem.Keyboard.current.leftArrowKey.isPressed)
+        {
+            currentRotationY -= 90f * Time.deltaTime;
+            changed = true;
+        }
+        if (UnityEngine.InputSystem.Keyboard.current.rightArrowKey.isPressed)
+        {
+            currentRotationY += 90f * Time.deltaTime;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            UpdateModelTransformServerRpc(currentScale, currentRotationY);
         }
     }
 
