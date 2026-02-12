@@ -324,13 +324,13 @@ public class Avatar : NetworkBehaviour
         Shader fallbackShader = Shader.Find("Universal Render Pipeline/Lit");
         if (fallbackShader == null)
         {
-            Debug.LogWarning("[Avatar] Fallback shader 'Universal Render Pipeline/Lit' not found. Using default 'Standard' as a last resort.");
+            Debug.LogWarning("[Avatar] フォールバックシェーダー 'Universal Render Pipeline/Lit' が見つかりませんでした。最終手段としてデフォルトの 'Standard' を使用します。");
             fallbackShader = Shader.Find("Standard");
         }
 
         if (fallbackShader == null)
         {
-            Debug.LogError("[Avatar] No suitable fallback shader found.");
+            Debug.LogError("[Avatar] 適切なフォールバックシェーダーが見つかりませんでした。");
             return;
         }
 
@@ -344,29 +344,42 @@ public class Avatar : NetworkBehaviour
             {
                 if (materials[i] == null || materials[i].shader == null || materials[i].shader.name == "Hidden/InternalErrorShader" || materials[i].shader.name == "")
                 {
-                    Debug.Log($"[Avatar] Applying fallback shader to {renderer.name} execution index {i}");
+                    Debug.Log($"[Avatar] フォールバックシェーダーを適用中: {renderer.name} 実行インデックス {i}");
                     
-                    // テクスチャと色の保持を試みます
+                    // テクスチャと色情報の保持を試みる
                     Texture mainTexture = null;
                     Color baseColor = Color.white;
 
                     Material oldMat = materials[i];
                     if (oldMat != null)
                     {
-                        if (oldMat.HasProperty("_BaseMap")) mainTexture = oldMat.GetTexture("_BaseMap");
-                        else if (oldMat.HasProperty("_MainTex")) mainTexture = oldMat.GetTexture("_MainTex");
+                        // 一般的なテクスチャ名を確認 (HasPropertyはErrorShaderの場合falseを返すため、直接取得を試みる)
+                        if (mainTexture == null) mainTexture = oldMat.GetTexture("baseColorTexture");
+                        if (mainTexture == null) mainTexture = oldMat.GetTexture("_BaseMap");
+                        if (mainTexture == null) mainTexture = oldMat.GetTexture("_MainTex");
+                        if (mainTexture == null) mainTexture = oldMat.GetTexture("_BaseColorMap");
 
+                        // 一般的な色名を確認
                         if (oldMat.HasProperty("_BaseColor")) baseColor = oldMat.GetColor("_BaseColor");
                         else if (oldMat.HasProperty("_Color")) baseColor = oldMat.GetColor("_Color");
+                        else if (oldMat.HasProperty("baseColorFactor")) baseColor = oldMat.GetColor("baseColorFactor");
+                        
+                        // どうしても見つからない場合のログ
+                        if (mainTexture == null)
+                        {
+                             Debug.LogWarning($"[Avatar] テクスチャが見つかりませんでした: {renderer.name}");
+                        }
                     }
 
                     Material newMat = new Material(fallbackShader);
                     
-                    // 新しいシェーダータイプに基づいて、保持されたプロパティを適用します
+                    // 新しいシェーダータイプに応じて保持したプロパティを適用
                     if (fallbackShader.name.Contains("Universal Render Pipeline/Lit") || fallbackShader.name.Contains("URP"))
                     {
                         if (mainTexture != null) newMat.SetTexture("_BaseMap", mainTexture);
+                        if (mainTexture != null) newMat.SetTexture("_MainTex", mainTexture); // 一部のURPシェーダーは_MainTexも使用する
                         newMat.SetColor("_BaseColor", baseColor);
+                        newMat.SetColor("_Color", baseColor); // フォールバック
                     }
                     else // Standard またはその他
                     {
