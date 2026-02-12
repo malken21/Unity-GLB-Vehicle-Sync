@@ -89,9 +89,9 @@ public class Avatar : NetworkBehaviour
                 if (Camera.main != null)
                 {
                     var cameraTransform = Camera.main.transform;
-                    cameraTransform.SetParent(null);
-                    cameraTransform.position = new Vector3(0f, 50f, 0f);
-                    cameraTransform.rotation = Quaternion.Euler(90f, 0f, 0f);
+                    // cameraTransform.SetParent(null);
+                    // cameraTransform.position = new Vector3(0f, 50f, 0f);
+                    // cameraTransform.rotation = Quaternion.Euler(90f, 0f, 0f);
                 }
 
                 var rotator = GetComponent<KeyboardRotator>();
