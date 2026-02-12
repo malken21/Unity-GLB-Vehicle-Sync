@@ -245,85 +245,92 @@ public class Avatar : NetworkBehaviour
 
     [SerializeField] private Transform customModelParent; // ユーザー指定の親オブジェクト
 
+    private GltfImport currentLoader;
     public async Task LoadAvatar(string url)
     {
-        using (var gltf = new GltfImport())
+        // 以前のローダーを破棄します
+        if (currentLoader != null)
         {
-            var success = await gltf.Load(url);
+            currentLoader.Dispose();
+            currentLoader = null;
+        }
 
-            if (success)
+        currentLoader = new GltfImport();
+        
+        var success = await currentLoader.Load(url);
+
+        if (success)
+        {
+            // 以前のコンテナをクリーンアップします
+            if (modelContainer != null)
             {
-                // 以前のコンテナをクリーンアップします
-                if (modelContainer != null)
-                {
-                    Destroy(modelContainer);
-                }
-                
-                // モデル用の新しいコンテナを作成します
-                modelContainer = new GameObject("ModelContainer");
+                Destroy(modelContainer);
+            }
+            
+            // モデル用の新しいコンテナを作成します
+            modelContainer = new GameObject("ModelContainer");
 
-                // 設定に基づいて親を設定します
-                if (customModelParent != null)
-                {
-                    modelContainer.transform.SetParent(customModelParent, false);
-                }
-                else
-                {
-                    modelContainer.transform.SetParent(transform, false);
-                }
-                
-                // ジオメトリ用のサブコンテナを作成します（ピボット調整用）
-                GameObject geometryContainer = new GameObject("GeometryContainer");
-                geometryContainer.transform.SetParent(modelContainer.transform, false);
-
-                // サブコンテナ内にインスタンス化します
-                await gltf.InstantiateMainSceneAsync(geometryContainer.transform);
-                
-                // 不足しているマテリアルにシェーダーのフォールバックを適用します
-                ApplyShaderFallback(geometryContainer);
-
-                // メッシュの底面がコンテナの原点（ピボット）に来るように位置を調整します
-                // 調整は geometryContainer に対して行い、modelContainer は原点のままにします
-                Bounds bounds = new Bounds(geometryContainer.transform.position, Vector3.zero);
-                bool hasBounds = false;
-                
-                // コンテナ内のレンダラーから境界（Bounds）を計算します
-                foreach (var renderer in geometryContainer.GetComponentsInChildren<Renderer>())
-                {
-                    if (!hasBounds)
-                    {
-                        bounds = renderer.bounds;
-                        hasBounds = true;
-                    }
-                    else
-                    {
-                        bounds.Encapsulate(renderer.bounds);
-                    }
-                }
-
-                if (hasBounds)
-                {
-                    float currentMinY = bounds.min.y;
-                    // modelContainerの位置（原点）を基準にします
-                    float targetY = modelContainer.transform.position.y;
-                    float shiftY = targetY - currentMinY;
-
-                    // 高さを調整するためにジオメトリコンテナを移動します
-                    geometryContainer.transform.position += new Vector3(0, shiftY, 0);
-                }
-
-                // 初期のネットワーク変換を適用します（modelContainerに対して適用されます）
-                UpdateModelTransform();
-
-                // 読み込み完了後に現在の可視性設定を適用します
-                UpdateVisibility(isVisibleNetwork.Value);
-
-                Debug.Log($"Avatar loaded successfully from {url}");
+            // 設定に基づいて親を設定します
+            if (customModelParent != null)
+            {
+                modelContainer.transform.SetParent(customModelParent, false);
             }
             else
             {
-                Debug.LogError($"Loading avatar failed from {url}");
+                modelContainer.transform.SetParent(transform, false);
             }
+            
+            // ジオメトリ用のサブコンテナを作成します（ピボット調整用）
+            GameObject geometryContainer = new GameObject("GeometryContainer");
+            geometryContainer.transform.SetParent(modelContainer.transform, false);
+
+            // サブコンテナ内にインスタンス化します
+            await currentLoader.InstantiateMainSceneAsync(geometryContainer.transform);
+            
+            // 不足しているマテリアルにシェーダーのフォールバックを適用します
+            ApplyShaderFallback(geometryContainer);
+
+            // メッシュの底面がコンテナの原点（ピボット）に来るように位置を調整します
+            // 調整は geometryContainer に対して行い、modelContainer は原点のままにします
+            Bounds bounds = new Bounds(geometryContainer.transform.position, Vector3.zero);
+            bool hasBounds = false;
+            
+            // コンテナ内のレンダラーから境界（Bounds）を計算します
+            foreach (var renderer in geometryContainer.GetComponentsInChildren<Renderer>())
+            {
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+            }
+
+            if (hasBounds)
+            {
+                float currentMinY = bounds.min.y;
+                // modelContainerの位置（原点）を基準にします
+                float targetY = modelContainer.transform.position.y;
+                float shiftY = targetY - currentMinY;
+
+                // 高さを調整するためにジオメトリコンテナを移動します
+                geometryContainer.transform.position += new Vector3(0, shiftY, 0);
+            }
+
+            // 初期のネットワーク変換を適用します（modelContainerに対して適用されます）
+            UpdateModelTransform();
+
+            // 読み込み完了後に現在の可視性設定を適用します
+            UpdateVisibility(isVisibleNetwork.Value);
+
+            Debug.Log($"Avatar loaded successfully from {url}");
+        }
+        else
+        {
+            Debug.LogError($"Loading avatar failed from {url}");
         }
     }
 
@@ -470,5 +477,16 @@ public class Avatar : NetworkBehaviour
             rb.angularVelocity = Vector3.zero;
         }
         Debug.Log("[Avatar] Respawned due to falling below -100Y.");
+    }
+
+    public override void OnDestroy()
+    {
+        // オブジェクト破棄時にローダーも適切に破棄します
+        if (currentLoader != null)
+        {
+            currentLoader.Dispose();
+            currentLoader = null;
+        }
+        base.OnDestroy();
     }
 }
