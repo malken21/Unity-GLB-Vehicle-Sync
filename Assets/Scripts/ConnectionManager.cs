@@ -1,6 +1,7 @@
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 using Unity.Collections;
 
@@ -162,6 +163,13 @@ public class ConnectionManager : NetworkBehaviour
             Debug.Log("[Boot] Starting as Client (Default for Standalone)...");
             NetworkManager.Singleton.StartClient();
 #endif
+        }
+    }
+    private void Update()
+    {
+        if (Keyboard.current != null && Keyboard.current.f11Key.wasPressedThisFrame)
+        {
+            Screen.fullScreen = !Screen.fullScreen;
         }
     }
 }
