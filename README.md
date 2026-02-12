@@ -1,6 +1,6 @@
 # Unity GLB Vehicle Sync
 
-動的に読み込まれたGLB (glTFバイナリ) の 3Dモデルのリアルタイムマルチプレイを実証するUnityプロジェクトです。
+動的に読み込まれたGLB (glTFバイナリ) の 3Dモデルをリアルタイムで同期することを実証するUnityプロジェクトです。
 **Unity 6** と **Netcode for GameObjects** を使用して構築されています。
 
 ## 機能
