@@ -247,75 +247,77 @@ public class Avatar : NetworkBehaviour
 
     public async Task LoadAvatar(string url)
     {
-        var gltf = new GltfImport();
-        var success = await gltf.Load(url);
-
-        if (success)
+        using (var gltf = new GltfImport())
         {
-            // 以前のコンテナをクリーンアップします
-            if (modelContainer != null)
-            {
-                Destroy(modelContainer);
-            }
-            
-            // モデル用の新しいコンテナを作成します
-            modelContainer = new GameObject("ModelContainer");
+            var success = await gltf.Load(url);
 
-            // 設定に基づいて親を設定します
-            if (customModelParent != null)
+            if (success)
             {
-                modelContainer.transform.SetParent(customModelParent, false);
-            }
-            else
-            {
-                modelContainer.transform.SetParent(transform, false);
-            }
-
-            // コンテナ内にインスタンス化します
-            await gltf.InstantiateMainSceneAsync(modelContainer.transform);
-            
-            // 不足しているマテリアルにシェーダーのフォールバックを適用します
-            ApplyShaderFallback(modelContainer);
-
-            // メッシュの底面がコンテナの原点（ピボット）に来るように位置を調整します
-            Bounds bounds = new Bounds(modelContainer.transform.position, Vector3.zero);
-            bool hasBounds = false;
-            
-            // コンテナ内のレンダラーから境界（Bounds）を計算します
-            foreach (var renderer in modelContainer.GetComponentsInChildren<Renderer>())
-            {
-                if (!hasBounds)
+                // 以前のコンテナをクリーンアップします
+                if (modelContainer != null)
                 {
-                    bounds = renderer.bounds;
-                    hasBounds = true;
+                    Destroy(modelContainer);
+                }
+                
+                // モデル用の新しいコンテナを作成します
+                modelContainer = new GameObject("ModelContainer");
+
+                // 設定に基づいて親を設定します
+                if (customModelParent != null)
+                {
+                    modelContainer.transform.SetParent(customModelParent, false);
                 }
                 else
                 {
-                    bounds.Encapsulate(renderer.bounds);
+                    modelContainer.transform.SetParent(transform, false);
                 }
-            }
 
-            if (hasBounds)
+                // コンテナ内にインスタンス化します
+                await gltf.InstantiateMainSceneAsync(modelContainer.transform);
+                
+                // 不足しているマテリアルにシェーダーのフォールバックを適用します
+                ApplyShaderFallback(modelContainer);
+
+                // メッシュの底面がコンテナの原点（ピボット）に来るように位置を調整します
+                Bounds bounds = new Bounds(modelContainer.transform.position, Vector3.zero);
+                bool hasBounds = false;
+                
+                // コンテナ内のレンダラーから境界（Bounds）を計算します
+                foreach (var renderer in modelContainer.GetComponentsInChildren<Renderer>())
+                {
+                    if (!hasBounds)
+                    {
+                        bounds = renderer.bounds;
+                        hasBounds = true;
+                    }
+                    else
+                    {
+                        bounds.Encapsulate(renderer.bounds);
+                    }
+                }
+
+                if (hasBounds)
+                {
+                    float currentMinY = bounds.min.y;
+                    float targetY = modelContainer.transform.position.y;
+                    float shiftY = targetY - currentMinY;
+
+                    // 高さを調整するためにコンテナを移動します
+                    modelContainer.transform.position += new Vector3(0, shiftY, 0);
+                }
+
+                // 初期のネットワーク変換を適用します
+                UpdateModelTransform();
+
+                // 読み込み完了後に現在の可視性設定を適用します
+                UpdateVisibility(isVisibleNetwork.Value);
+
+                Debug.Log($"Avatar loaded successfully from {url}");
+            }
+            else
             {
-                float currentMinY = bounds.min.y;
-                float targetY = modelContainer.transform.position.y;
-                float shiftY = targetY - currentMinY;
-
-                // 高さを調整するためにコンテナを移動します
-                modelContainer.transform.position += new Vector3(0, shiftY, 0);
+                Debug.LogError($"Loading avatar failed from {url}");
             }
-
-            // 初期のネットワーク変換を適用します
-            UpdateModelTransform();
-
-            // 読み込み完了後に現在の可視性設定を適用します
-            UpdateVisibility(isVisibleNetwork.Value);
-
-            Debug.Log($"Avatar loaded successfully from {url}");
-        }
-        else
-        {
-            Debug.LogError($"Loading avatar failed from {url}");
         }
     }
 
@@ -413,6 +415,7 @@ public class Avatar : NetworkBehaviour
         }
     }
 
+
     private void HandleManualAdjustments()
     {
         if (UnityEngine.InputSystem.Keyboard.current == null) return;
@@ -421,28 +424,28 @@ public class Avatar : NetworkBehaviour
         float currentScale = modelScaleNetwork.Value;
         float currentRotationY = modelRotationYNetwork.Value;
 
-        // スケール：上矢印（拡大）、下矢印（縮小）
-        if (UnityEngine.InputSystem.Keyboard.current.upArrowKey.isPressed)
+        // スケール：上矢印（拡大+0.1）、下矢印（縮小-0.1）
+        if (UnityEngine.InputSystem.Keyboard.current.upArrowKey.wasPressedThisFrame)
         {
-            currentScale += 0.5f * Time.deltaTime;
+            currentScale += 0.1f;
             changed = true;
         }
-        if (UnityEngine.InputSystem.Keyboard.current.downArrowKey.isPressed)
+        if (UnityEngine.InputSystem.Keyboard.current.downArrowKey.wasPressedThisFrame)
         {
-            currentScale -= 0.5f * Time.deltaTime;
+            currentScale -= 0.1f;
             if (currentScale < 0.1f) currentScale = 0.1f;
             changed = true;
         }
 
-        // 回転：左矢印（反時計回り）、右矢印（時計回り）
-        if (UnityEngine.InputSystem.Keyboard.current.leftArrowKey.isPressed)
+        // 回転：左矢印（反時計回り22.5度）、右矢印（時計回り22.5度）
+        if (UnityEngine.InputSystem.Keyboard.current.leftArrowKey.wasPressedThisFrame)
         {
-            currentRotationY -= 90f * Time.deltaTime;
+            currentRotationY -= 22.5f;
             changed = true;
         }
-        if (UnityEngine.InputSystem.Keyboard.current.rightArrowKey.isPressed)
+        if (UnityEngine.InputSystem.Keyboard.current.rightArrowKey.wasPressedThisFrame)
         {
-            currentRotationY += 90f * Time.deltaTime;
+            currentRotationY += 22.5f;
             changed = true;
         }
 
