@@ -86,7 +86,7 @@ public class ConnectionManager : NetworkBehaviour
             var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
             
             // ポート設定の読み込み
-            ushort port = 7777; // Default
+            ushort port = 7777; // デフォルト
             if (!string.IsNullOrEmpty(cliPort) && ushort.TryParse(cliPort, out ushort parsedPort))
             {
                 port = parsedPort;
@@ -111,7 +111,7 @@ public class ConnectionManager : NetworkBehaviour
             else if (cliMode.ToUpper() == "CLIENT")
             {
                 // CLIENT モード
-                string targetIp = "127.0.0.1"; // Default
+                string targetIp = "127.0.0.1"; // デフォルト
                 if (!string.IsNullOrEmpty(cliServerIp))
                 {
                     targetIp = cliServerIp;
@@ -157,7 +157,7 @@ public class ConnectionManager : NetworkBehaviour
             }
 #else
             // スタンドアロン / 通常ビルド
-            // スタンドアロン / 通常ビルド
+
             // デフォルトはクライアントとして起動 (サーバーとして起動したい場合は -mode HOST を指定)
             Debug.Log("[Boot] Starting as Client (Default for Standalone)...");
             NetworkManager.Singleton.StartClient();

@@ -12,7 +12,7 @@ using Unity.Collections;
 public class Avatar : NetworkBehaviour
 {
 
-    // Stores the avatar URL synchronized across the network
+    // ネットワーク上で同期されるアバターのURLを保存します
     private readonly NetworkVariable<FixedString512Bytes> avatarUrlNetwork = new NetworkVariable<FixedString512Bytes>();
     private readonly NetworkVariable<float> modelScaleNetwork = new NetworkVariable<float>(1.0f);
     private readonly NetworkVariable<float> modelRotationYNetwork = new NetworkVariable<float>(0.0f);
@@ -29,7 +29,7 @@ public class Avatar : NetworkBehaviour
         modelScaleNetwork.OnValueChanged += OnModelTransformChanged;
         modelRotationYNetwork.OnValueChanged += OnModelTransformChanged;
 
-        // If there's already a URL set when we spawn (e.g. late join), load it
+        // スポーン時にすでにURLが設定されている場合（例：途中参加）、それを読み込みます
         if (!avatarUrlNetwork.Value.IsEmpty)
         {
             _ = LoadAvatar(avatarUrlNetwork.Value.ToString());
@@ -39,12 +39,12 @@ public class Avatar : NetworkBehaviour
         {
             if (ConnectionManager.Instance.summonAvatar)
             {
-                // Camera tracking logic
+                // カメラ追跡ロジック
                 if (Camera.main != null)
                 {
                     var cameraTransform = Camera.main.transform;
                     
-                    // Find or create "Horiz" child for stable camera tracking
+                    // 安定したカメラ追跡のために "Horiz" 子オブジェクトを検索または作成します
                     var horizTransform = transform.Find("Horiz");
                     if (horizTransform == null)
                     {
@@ -56,9 +56,9 @@ public class Avatar : NetworkBehaviour
                     }
 
                     cameraTransform.SetParent(horizTransform);
-                    // Adjust position behind and slightly above the avatar
-                    // User reported side view with previous settings, implying model faces X-axis.
-                    // Moving camera to -X to look at the back of an X-forward model.
+                    // アバターの後ろ、かつ少し上の位置に調整します
+                    // 以前の設定では横からの視点になるとの報告があり、モデルがX軸を向いていることを示唆しています。
+                    // X軸前方にあるモデルの背面を見るため、カメラを-Xに移動します。
                     cameraTransform.localPosition = new Vector3(8f, 3f, 0f); 
                     cameraTransform.localRotation = Quaternion.Euler(0f, -90f, 0f);
                     Debug.Log($"[Avatar] Main Camera attached to {horizTransform.name} with X-axis alignment.");
@@ -68,7 +68,7 @@ public class Avatar : NetworkBehaviour
                      Debug.LogWarning("[Avatar] Main Camera not found!");
                 }
 
-                // Execute on main thread
+                // メインスレッドで実行します
                 var filePath = WindowsFileDialog.Open("GLB Files (*.glb)|*.glb", "Select Avatar");
                 if (!string.IsNullOrEmpty(filePath))
                 {
@@ -76,21 +76,21 @@ public class Avatar : NetworkBehaviour
                 }
                 else
                 {
-                    // Fallback or do nothing
+                    // フォールバックまたは何もしない
                     Debug.Log("No file selected, loading default.");
-                    // For default, we also need to sync it if we want others to see it, 
-                    // but usually default is a placeholder. attempt to sync default if needed.
-                    // For now, let's just sync the default URL if nothing selected.
-                    // Actually, let's stick to the previous logic but via RPC
-                     SetAvatarUrlServerRpc(ConnectionManager.Instance.serverUrl + "/default"); // Simplified for now, assuming server handles it or just empty
+                    // デフォルトの場合、他の人に見えるようにするには同期する必要がありますが、
+                    // 通常、デフォルトはプレースホルダーです。必要に応じてデフォルトの同期を試みます。
+                    // 取りあえず、何も選択されていない場合はデフォルトのURLを同期します。
+                    // 実は、以前のロジックのままRPC経由にします
+                    SetAvatarUrlServerRpc(ConnectionManager.Instance.serverUrl + "/default"); // サーバーが処理するか空であると仮定し、現時点では簡略化しています
                 }
             }
             else
             {
-                // Overhead view mode
+                // 俯瞰（オーバーヘッド）ビューモード
                 Debug.Log("[Avatar] Summoning disabled via command line argument. Entering Overhead View Mode.");
 
-                // Disable Renderers and Colliders to hide the spectator ball
+                // 観戦者のボールを隠すためにレンダラーとコライダーを無効にします
                 foreach (var r in GetComponentsInChildren<Renderer>())
                 {
                     r.enabled = false;
@@ -117,7 +117,7 @@ public class Avatar : NetworkBehaviour
         }
         else
         {
-            // Disable input controls for non-owners to prevent controlling other players
+            // 他のプレイヤーを操作できないように、所有者以外からの入力操作を無効にします
             var rotator = GetComponent<KeyboardRotator>();
             if (rotator != null)
             {
@@ -183,7 +183,7 @@ public class Avatar : NetworkBehaviour
                 string loadUrl = "";
                 try 
                 {
-                    // Attempt to parse as JSON
+                    // JSONとして解析を試みます
                     var responseJson = JsonUtility.FromJson<UploadResponse>(responseText);
                     if (responseJson != null && !string.IsNullOrEmpty(responseJson.url))
                     {
@@ -192,7 +192,7 @@ public class Avatar : NetworkBehaviour
                 }
                 catch (Exception)
                 {
-                    // Fallback to raw text if not JSON or parsing fails
+                    // JSONでない場合、または解析に失敗した場合は生のテキストにフォールバックします
                 }
 
                 if (string.IsNullOrEmpty(loadUrl))
@@ -218,7 +218,7 @@ public class Avatar : NetworkBehaviour
 
     private GameObject modelContainer;
 
-    [SerializeField] private Transform customModelParent; // User specified parent
+    [SerializeField] private Transform customModelParent; // ユーザー指定の親オブジェクト
 
     public async Task LoadAvatar(string url)
     {
@@ -227,16 +227,16 @@ public class Avatar : NetworkBehaviour
 
         if (success)
         {
-            // Clean up previous container
+            // 以前のコンテナをクリーンアップします
             if (modelContainer != null)
             {
                 Destroy(modelContainer);
             }
             
-            // Create a new container for the model
+            // モデル用の新しいコンテナを作成します
             modelContainer = new GameObject("ModelContainer");
 
-            // Set parent based on configuration
+            // 設定に基づいて親を設定します
             if (customModelParent != null)
             {
                 modelContainer.transform.SetParent(customModelParent, false);
@@ -246,17 +246,17 @@ public class Avatar : NetworkBehaviour
                 modelContainer.transform.SetParent(transform, false);
             }
 
-            // Instantiate into the container
+            // コンテナ内にインスタンス化します
             await gltf.InstantiateMainSceneAsync(modelContainer.transform);
             
-            // Apply shader fallback for missing materials
+            // 不足しているマテリアルにシェーダーのフォールバックを適用します
             ApplyShaderFallback(modelContainer);
 
-            // Adjust position so the bottom of the mesh is at the origin (pivot) of the container
+            // メッシュの底面がコンテナの原点（ピボット）に来るように位置を調整します
             Bounds bounds = new Bounds(modelContainer.transform.position, Vector3.zero);
             bool hasBounds = false;
             
-            // Calculate bounds from renderers inside the container
+            // コンテナ内のレンダラーから境界（Bounds）を計算します
             foreach (var renderer in modelContainer.GetComponentsInChildren<Renderer>())
             {
                 if (!hasBounds)
@@ -276,11 +276,11 @@ public class Avatar : NetworkBehaviour
                 float targetY = modelContainer.transform.position.y;
                 float shiftY = targetY - currentMinY;
 
-                // Move the container to adjust height
+                // 高さを調整するためにコンテナを移動します
                 modelContainer.transform.position += new Vector3(0, shiftY, 0);
             }
 
-            // Apply initial networked transform
+            // 初期のネットワーク変換を適用します
             UpdateModelTransform();
 
             Debug.Log($"Avatar loaded successfully from {url}");
@@ -318,7 +318,7 @@ public class Avatar : NetworkBehaviour
                 {
                     Debug.Log($"[Avatar] Applying fallback shader to {renderer.name} execution index {i}");
                     
-                    // Attempt to preserve texture and color
+                    // テクスチャと色の保持を試みます
                     Texture mainTexture = null;
                     Color baseColor = Color.white;
 
@@ -334,13 +334,13 @@ public class Avatar : NetworkBehaviour
 
                     Material newMat = new Material(fallbackShader);
                     
-                    // Apply preserved properties based on the new shader type
+                    // 新しいシェーダータイプに基づいて、保持されたプロパティを適用します
                     if (fallbackShader.name.Contains("Universal Render Pipeline/Lit") || fallbackShader.name.Contains("URP"))
                     {
                         if (mainTexture != null) newMat.SetTexture("_BaseMap", mainTexture);
                         newMat.SetColor("_BaseColor", baseColor);
                     }
-                    else // Standard or other
+                    else // Standard またはその他
                     {
                         if (mainTexture != null) newMat.SetTexture("_MainTex", mainTexture);
                         newMat.SetColor("_Color", baseColor);
@@ -362,7 +362,7 @@ public class Avatar : NetworkBehaviour
     {
         if (IsOwner)
         {
-            // Arrow key controls for scale (Up/Down) and rotation (Left/Right)
+            // 矢印キーでのスケール（上/下）と回転（左/右）の操作
             HandleManualAdjustments();
 
             if (transform.position.y <= -100f)
@@ -380,7 +380,7 @@ public class Avatar : NetworkBehaviour
         float currentScale = modelScaleNetwork.Value;
         float currentRotationY = modelRotationYNetwork.Value;
 
-        // Scale: Up Arrow (Increase), Down Arrow (Decrease)
+        // スケール：上矢印（拡大）、下矢印（縮小）
         if (UnityEngine.InputSystem.Keyboard.current.upArrowKey.isPressed)
         {
             currentScale += 0.5f * Time.deltaTime;
@@ -393,7 +393,7 @@ public class Avatar : NetworkBehaviour
             changed = true;
         }
 
-        // Rotation: Left Arrow (CCW), Right Arrow (CW)
+        // 回転：左矢印（反時計回り）、右矢印（時計回り）
         if (UnityEngine.InputSystem.Keyboard.current.leftArrowKey.isPressed)
         {
             currentRotationY -= 90f * Time.deltaTime;
