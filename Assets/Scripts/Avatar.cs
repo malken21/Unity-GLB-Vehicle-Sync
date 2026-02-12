@@ -314,11 +314,39 @@ public class Avatar : NetworkBehaviour
 
             for (int i = 0; i < materials.Length; i++)
             {
-                // If material is null or using the internal error shader (pink color)
-                if (materials[i] == null || materials[i].shader == null || materials[i].shader.name == "Hidden/InternalErrorShader")
+                if (materials[i] == null || materials[i].shader == null || materials[i].shader.name == "Hidden/InternalErrorShader" || materials[i].shader.name == "")
                 {
                     Debug.Log($"[Avatar] Applying fallback shader to {renderer.name} execution index {i}");
-                    materials[i] = new Material(fallbackShader);
+                    
+                    // Attempt to preserve texture and color
+                    Texture mainTexture = null;
+                    Color baseColor = Color.white;
+
+                    Material oldMat = materials[i];
+                    if (oldMat != null)
+                    {
+                        if (oldMat.HasProperty("_BaseMap")) mainTexture = oldMat.GetTexture("_BaseMap");
+                        else if (oldMat.HasProperty("_MainTex")) mainTexture = oldMat.GetTexture("_MainTex");
+
+                        if (oldMat.HasProperty("_BaseColor")) baseColor = oldMat.GetColor("_BaseColor");
+                        else if (oldMat.HasProperty("_Color")) baseColor = oldMat.GetColor("_Color");
+                    }
+
+                    Material newMat = new Material(fallbackShader);
+                    
+                    // Apply preserved properties based on the new shader type
+                    if (fallbackShader.name.Contains("Universal Render Pipeline/Lit") || fallbackShader.name.Contains("URP"))
+                    {
+                        if (mainTexture != null) newMat.SetTexture("_BaseMap", mainTexture);
+                        newMat.SetColor("_BaseColor", baseColor);
+                    }
+                    else // Standard or other
+                    {
+                        if (mainTexture != null) newMat.SetTexture("_MainTex", mainTexture);
+                        newMat.SetColor("_Color", baseColor);
+                    }
+
+                    materials[i] = newMat;
                     modified = true;
                 }
             }
