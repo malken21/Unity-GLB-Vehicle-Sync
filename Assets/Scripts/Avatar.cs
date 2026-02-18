@@ -125,6 +125,26 @@ public class Avatar : NetworkBehaviour
                 rotator.enabled = false;
             }
         }
+
+        // Initialize Microbit Controller for Owner
+        if (IsOwner)
+        {
+            // Ensure BLE Manager exists in the scene
+            if (MicrobitBLEManager.Instance == null)
+            {
+                var mgrGo = new GameObject("MicrobitBLEManager");
+                mgrGo.AddComponent<MicrobitBLEManager>();
+                Debug.Log("[Avatar] Created MicrobitBLEManager singleton.");
+            }
+
+            // Add Controller if not present
+            var microbitController = GetComponent<MicrobitAvatarController>();
+            if (microbitController == null)
+            {
+                microbitController = gameObject.AddComponent<MicrobitAvatarController>();
+                Debug.Log("[Avatar] Added MicrobitAvatarController.");
+            }
+        }
     }
 
     private void OnAvatarUrlChanged(FixedString512Bytes previousValue, FixedString512Bytes newValue)
