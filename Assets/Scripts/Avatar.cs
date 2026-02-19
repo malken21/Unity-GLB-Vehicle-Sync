@@ -125,6 +125,26 @@ public class Avatar : NetworkBehaviour
                 rotator.enabled = false;
             }
         }
+
+        // 所有者の場合に Microbit コントローラーを初期化
+        if (IsOwner)
+        {
+            // シーン内に BLE マネージャーが存在することを確認
+            if (MicrobitBLEManager.Instance == null)
+            {
+                var mgrGo = new GameObject("MicrobitBLEManager");
+                mgrGo.AddComponent<MicrobitBLEManager>();
+                Debug.Log("[Avatar] MicrobitBLEManager シングルトンを作成しました。");
+            }
+
+            // コントローラーがアタッチされていない場合は追加
+            var microbitController = GetComponent<MicrobitAvatarController>();
+            if (microbitController == null)
+            {
+                microbitController = gameObject.AddComponent<MicrobitAvatarController>();
+                Debug.Log("[Avatar] MicrobitAvatarController を追加しました。");
+            }
+        }
     }
 
     private void OnAvatarUrlChanged(FixedString512Bytes previousValue, FixedString512Bytes newValue)
@@ -326,11 +346,11 @@ public class Avatar : NetworkBehaviour
             // 読み込み完了後に現在の可視性設定を適用します
             UpdateVisibility(isVisibleNetwork.Value);
 
-            Debug.Log($"Avatar loaded successfully from {url}");
+            Debug.Log($"アバターを正常に読み込みました: {url}");
         }
         else
         {
-            Debug.LogError($"Loading avatar failed from {url}");
+            Debug.LogError($"アバターの読み込みに失敗しました: {url}");
         }
     }
 
