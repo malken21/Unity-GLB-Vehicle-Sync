@@ -388,7 +388,7 @@ public class Avatar : NetworkBehaviour
 
             for (int i = 0; i < materials.Length; i++)
             {
-                if (materials[i] == null || materials[i].shader == null || materials[i].shader.name == "Hidden/InternalErrorShader" || materials[i].shader.name == "" || materials[i].shader.name.Contains("glTF"))
+                if (materials[i] == null || materials[i].shader == null || materials[i].shader.name == "Hidden/InternalErrorShader" || materials[i].shader.name == "")
                 {
                     Debug.Log($"[Avatar] フォールバックシェーダーを適用中: {renderer.name} 実行インデックス {i}");
                     
