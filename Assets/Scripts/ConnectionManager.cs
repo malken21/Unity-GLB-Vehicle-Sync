@@ -23,13 +23,13 @@ public class ConnectionManager : NetworkBehaviour
         if (IsServer)
         {
             string url = initialServerUrl;
-            if (url.Contains("localhost"))
+            if (url.Contains("localhost") || url.Contains("127.0.0.1"))
             {
                 string ip = GetLocalIPAddress();
                 if (!string.IsNullOrEmpty(ip))
                 {
-                    url = url.Replace("localhost", ip);
-                    Debug.Log($"[ConnectionManager] Replaced localhost with {ip} -> {url}");
+                    url = url.Replace("localhost", ip).Replace("127.0.0.1", ip);
+                    Debug.Log($"[ConnectionManager] Replaced localhost/127.0.0.1 with {ip} -> {url}");
                 }
             }
             _serverUrl.Value = new FixedString512Bytes(url);
@@ -41,13 +41,40 @@ public class ConnectionManager : NetworkBehaviour
         try
         {
             var host = System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName());
+            string bestIp = null;
+
             foreach (var ip in host.AddressList)
             {
                 if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
                 {
-                    return ip.ToString();
+                    string ipStr = ip.ToString();
+                    
+                    // 優先順位: 192.168 > 10. > 172. > その他
+                    if (ipStr.StartsWith("192.168."))
+                    {
+                        return ipStr; // 最も一般的
+                    }
+                    if (ipStr.StartsWith("10."))
+                    {
+                        if (bestIp == null || !bestIp.StartsWith("192.168.")) bestIp = ipStr;
+                    }
+                    else if (ipStr.StartsWith("172."))
+                    {
+                        // 172.16.x.x - 172.31.x.x はプライベートIP
+                        int secondOctet = int.Parse(ipStr.Split('.')[1]);
+                        if (secondOctet >= 16 && secondOctet <= 31)
+                        {
+                            if (bestIp == null) bestIp = ipStr;
+                        }
+                    }
+                    else if (bestIp == null)
+                    {
+                        bestIp = ipStr;
+                    }
                 }
             }
+            
+            if (bestIp != null) return bestIp;
         }
         catch (System.Exception e)
         {
@@ -111,6 +138,12 @@ public class ConnectionManager : NetworkBehaviour
             Debug.Log($"[Boot] Summon Avatar set to: {summonAvatar}");
         }
 
+        if (!string.IsNullOrEmpty(cliAssetUrl))
+        {
+            Debug.Log($"[Boot] Asset Server URL set to: {cliAssetUrl}");
+            initialServerUrl = cliAssetUrl;
+        }
+
         if (!string.IsNullOrEmpty(cliMode))
         {
             Debug.Log($"[Boot] Command Line Config Detected: Mode={cliMode}");
@@ -126,11 +159,7 @@ public class ConnectionManager : NetworkBehaviour
             if (cliMode.ToUpper() == "HOST")
             {
                 // HOST モード
-                if (!string.IsNullOrEmpty(cliAssetUrl))
-                {
-                    Debug.Log($"[Boot] Asset Server URL set to: {cliAssetUrl}");
-                    _serverUrl.Value = new FixedString512Bytes(cliAssetUrl);
-                }
+                // cliAssetUrl logic moved above
 
                 // UnityTransportの設定
                 transport.SetConnectionData("0.0.0.0", port);
