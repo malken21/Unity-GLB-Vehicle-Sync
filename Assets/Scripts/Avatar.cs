@@ -268,6 +268,7 @@ public class Avatar : NetworkBehaviour
     private GameObject modelContainer;
 
     [SerializeField] private Transform customModelParent; // ユーザー指定の親オブジェクト
+    [SerializeField] private Shader urpLitShader; // ビルド時にシェーダーが含まれるように参照を保持
 
     private GltfImport currentLoader;
     public async Task LoadAvatar(string url)
@@ -360,7 +361,13 @@ public class Avatar : NetworkBehaviour
 
     private void ApplyShaderFallback(GameObject container)
     {
-        Shader fallbackShader = Shader.Find("Universal Render Pipeline/Lit");
+        Shader fallbackShader = urpLitShader;
+        
+        if (fallbackShader == null)
+        {
+            fallbackShader = Shader.Find("Universal Render Pipeline/Lit");
+        }
+
         if (fallbackShader == null)
         {
             Debug.LogWarning("[Avatar] フォールバックシェーダー 'Universal Render Pipeline/Lit' が見つかりませんでした。最終手段としてデフォルトの 'Standard' を使用します。");
