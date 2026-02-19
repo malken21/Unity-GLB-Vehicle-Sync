@@ -1,13 +1,17 @@
 using UnityEngine;
 using Unity.Netcode;
 
-[RequireComponent(typeof(KeyboardRotator))] // We reuse the logic or replicate it
+/// <summary>
+/// MicrobitBLEManager からのデータを受け取り、アバターの回転を制御するクラス。
+/// KeyboardRotator のロジックを再利用または複製して動作します。
+/// </summary>
+[RequireComponent(typeof(KeyboardRotator))]
 public class MicrobitAvatarController : NetworkBehaviour
 {
     private KeyboardRotator rotator;
     
-    // Command mapping
-    private string currentCommand = "S"; // S = Stop
+    // 現在のコマンド (S = 停止)
+    private string currentCommand = "S";
 
     private void Start()
     {
@@ -15,12 +19,13 @@ public class MicrobitAvatarController : NetworkBehaviour
         
         if (MicrobitBLEManager.Instance != null)
         {
+            // BLE マネージャーからのデータ受信イベントを購読
             MicrobitBLEManager.Instance.OnDataReceived += HandleDataReceived;
-            Debug.Log("[MicrobitController] Subscribed to BLE Manager");
+            Debug.Log("[MicrobitController] BLE マネージャーのイベントを購読しました");
         }
         else
         {
-            Debug.LogWarning("[MicrobitController] MicrobitBLEManager instance not found!");
+            Debug.LogWarning("[MicrobitController] MicrobitBLEManager のインスタンスが見つかりません。");
         }
     }
 
@@ -28,46 +33,40 @@ public class MicrobitAvatarController : NetworkBehaviour
     {
         if (MicrobitBLEManager.Instance != null)
         {
+            // イベントの購読を解除
             MicrobitBLEManager.Instance.OnDataReceived -= HandleDataReceived;
         }
         base.OnDestroy();
     }
 
+    /// <summary>
+    /// BLE から受信した文字列を処理します。
+    /// </summary>
     private void HandleDataReceived(string data)
     {
-        // Clean the string (remove newlines etc)
+        // 文字列のトリミング（改行コードの削除など）と大文字化
         currentCommand = data.Trim().ToUpper();
-        // Debug.Log($"[MicrobitController] Command: {currentCommand}");
     }
 
     private void FixedUpdate()
     {
+        // ネットワーク上の所有者（Owner）でない場合は処理しない
         if (!IsOwner) return;
-        // If we want to allow keyboard AND microbit, we should check if command is 'S' (stop)
-        // If command is 'S', we might let keyboard take over, or just do nothing.
         
-        // This is a simple implementation: simpler than KeyboardRotator's physics
-        // But let's try to inject into the Rigidbody if possible, matching KeyboardRotator's style
-        
+        // KeyboardRotator が存在することを確認
         if (rotator == null) return;
         
-        // Reflection or public access? 
-        // KeyboardRotator fields are private serializefield. 
-        // We can't access them easily unless we change KeyboardRotator or duplicate logic.
-        // Let's duplicate the relevant logic for now for safety, or assume we modify KeyboardRotator.
-        
-        // Actually, we can just use the same components.
+        // Rigidbody の取得
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb == null) return;
 
-        float torque = 0f;
         float rotate = 0f;
         
-        // Command Logic
-        // "L" -> Rotate Left
-        // "R" -> Rotate Right
-        // "F" -> Forward (if added)
-        // "B" -> Backward (if added)
+        // コマンド判定ロジック
+        // "L" -> 左回転
+        // "R" -> 右回転
+        // "F" -> 前進 (拡張用)
+        // "B" -> 後退 (拡張用)
         
         if (currentCommand == "L")
         {
@@ -77,15 +76,11 @@ public class MicrobitAvatarController : NetworkBehaviour
         {
              rotate = 1f;
         }
-        // Add more commands as needed
 
-        // Apply
-        float rotationSpeed = 100f; // Could accept a serialized field
+        // 回転速度。必要に応じて SerializedField に変更可能
+        float rotationSpeed = 100f;
         
-        // Same as KeyboardRotator: A/D rotates Transform directly (sometimes better for avatars)
-        // Or uses Torque if desired.
-        // KeyboardRotator uses transform.Rotate for A/D
-        
+        // KeyboardRotator と同様に Transform.Rotate を使用して回転を適用
         if (rotate != 0f)
         {
              transform.Rotate(Vector3.up, rotate * rotationSpeed * Time.fixedDeltaTime);

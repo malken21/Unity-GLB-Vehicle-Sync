@@ -1,48 +1,48 @@
-# Micro:bit Bluetooth Setup for Unity Control
+# Unity制御用 Micro:bit Bluetooth設定ガイド
 
-To control your avatar with a micro:bit, you need to flash a specific program onto the micro:bit that sends accelerometer or button data via Bluetooth UART service.
+micro:bitでアバターを操作するには、加速度センサやボタンのデータをBluetooth UARTサービス経由で送信する専用のプログラムをmicro:bitに書き込む必要があります。
 
-## 1. Programming the Micro:bit (MakeCode)
+## 1. Micro:bitのプログラミング (MakeCode)
 
-1. Go to [MakeCode for micro:bit](https://makecode.microbit.org/).
-2. Start a **New Project**.
-3. Click on the **Extensions** gear icon (or "Advanced" -> "Extensions").
-4. Search for `bluetooth` and add the **bluetooth** extension.
-    * *Note: This will likely disable Radio functionality, which is fine.*
-5. Click on **Project Settings** (gear icon) -> **Project Settings**.
-6. Ensure **No Pairing Required: Anyone can connect via Bluetooth** is selected. This is crucial for easy connection from Windows/Unity without complex pairing.
+1. [micro:bit用 MakeCode](https://makecode.microbit.org/) にアクセスします。
+2. **新しいプロジェクト** を作成します。
+3. **拡張機能** ギアアイコン（または「高度なブロック」→「拡張機能」）をクリックします。
+4. `bluetooth` を検索し、**bluetooth** 拡張機能を追加します。
+    * *注意: これにより無線（Radio）機能が無効になりますが、問題ありません。*
+5. ギアアイコンから **プロジェクトの設定** を開きます。
+6. **ペアリングなしでも接続可能 (No Pairing Required)** にチェックを入れます。これは、複雑なペアリングなしでWindows/Unityから簡単に接続するために不可欠です。
 
-## 2. Block Code Example
+## 2. ブロックコードの例
 
-Create the following logic in the Block Editor:
+ツールボックスから以下のロジックを作成します：
 
-**On Start:**
+**最初だけ (On Start):**
 
-* `bluetooth uart service` (starts the UART service)
-* `show icon (Heart)` (to indicate it's running)
+* `Bluetooth UART サービスを開始する` (UARTサービスを開始)
+* `アイコンを表示 (ハート)` (動作中であることを示す)
 
-**Forever:**
+**ずっと (Forever):**
 
-* `if button A is pressed`:
-  * `bluetooth uart write string "L"` (Left)
-* `else if button B is pressed`:
-  * `bluetooth uart write string "R"` (Right)
-* `else`:
-  * `bluetooth uart write string "S"` (Stop)
-* `pause (ms) 100` (to avoid flooding)
+* `もし ボタンAが押されている なら`:
+  * `Bluetooth UART 文字列を送信する "L"` (左回転)
+* `または もし ボタンBが押されている なら`:
+  * `Bluetooth UART 文字列を送信する "R"` (右回転)
+* `そうでなければ`:
+  * `Bluetooth UART 文字列を送信する "S"` (停止)
+* `一時停止 (ミリ秒) 100` (データの過剰送信を防ぐため)
 
-*Alternatively, using Accelerometer:*
+*加速度センサを使用する場合の代替例:*
 
-* `if input rotation (roll) < -20`:
-  * `bluetooth uart write string "L"`
-* `else if input rotation (roll) > 20`:
-  * `bluetooth uart write string "R"`
-* `else`:
-  * `bluetooth uart write string "S"`
+* `もし 加速度 (ロール) < -20 なら`:
+  * `Bluetooth UART 文字列を送信する "L"`
+* `または もし 加速度 (ロール) > 20 なら`:
+  * `Bluetooth UART 文字列を送信する "R"`
+* `そうでなければ`:
+  * `Bluetooth UART 文字列を送信する "S"`
 
-## 3. JavaScript Code Example
+## 3. JavaScript コードの例
 
-You can switch to the **JavaScript** tab and paste this code:
+**JavaScript** タブに切り替えて、以下のコードを貼り付けることもできます：
 
 ```javascript
 bluetooth.startUartService()
@@ -60,18 +60,18 @@ basic.forever(function () {
 })
 ```
 
-## 4. Flashing
+## 4. 書き込み (Flashing)
 
-1. Connect your micro:bit via USB.
-2. Click **Download**.
-3. Copy the `.hex` file to the MICROBIT drive.
-4. Wait for the compilation to finish.
+1. micro:bitをUSBで接続します。
+2. **ダウンロード** をクリックします。
+3. 生成された `.hex` ファイルを MICROBIT ドライブにコピーします。
+4. 転送が完了するまで待ちます。
 
-## 5. Pairing with Windows
+## 5. Windowsでのペアリング
 
-1. On your Windows PC, go to **Settings > Bluetooth & devices**.
-2. Click **Add device** > **Bluetooth**.
-3. Power on your micro:bit.
-4. Select **BBC micro:bit [xxxxx]** when it appears.
-5. If asked for a PIN, it might display a pattern on the micro:bit LEDs, or just connect if you selected "No Pairing Required".
-6. Once connected/paired in Windows, the Unity script can discover it.
+1. Windows PCで、**設定 > Bluetooth とデバイス** を開きます。
+2. **デバイスの追加 > Bluetooth** をクリックします。
+3. micro:bitの電源を入れます。
+4. リストに表示された **BBC micro:bit [xxxxx]** を選択します。
+5. PIN（パスコード）を求められた場合、micro:bitのLEDに表示されるパターンを確認するか、「ペアリングなしを許可」に設定していればそのまま接続されます。
+6. Windowsで接続/ペアリングが完了すると、Unityスクリプトがデバイスを検出できるようになります。

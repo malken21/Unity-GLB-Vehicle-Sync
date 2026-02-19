@@ -10,31 +10,36 @@ using Windows.Devices.Enumeration;
 using Windows.Storage.Streams;
 #endif
 
+/// <summary>
+/// BBC micro:bit との Bluetooth LE (BLE) 通信を管理するクラス。
+/// Windows のネイティブ Bluetooth API (WinRT) を使用します。
+/// </summary>
 public class MicrobitBLEManager : MonoBehaviour
 {
     public static MicrobitBLEManager Instance { get; private set; }
 
 #if ENABLE_WINMD_SUPPORT
-    [Header("Settings")]
+    [Header("設定")]
     [SerializeField] private string targetDeviceNameStart = "BBC micro:bit";
-    // Nordic UART Service UUID
+    // Nordic UART サービスの UUID
     [SerializeField] private string serviceUUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
-    // RX Characteristic (Write) - Not used for this simple control but good to have
+    // RX 特性 (書き込み用) - 今回のシンプルな制御では使用しませんが、拡張用に定義
     [SerializeField] private string rxCharUUID = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E";
-    // TX Characteristic (Notify) - We listen to this
+    // TX 特性 (通知用) - micro:bit からのデータをリッスンします
     [SerializeField] private string txCharUUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E";
 #endif
 
-    [Header("Status")]
+    [Header("ステータス")]
     public bool isConnected = false;
     public string lastReceivedData = "";
-    public string statusMessage = "Not Connected";
+    public string statusMessage = "未接続";
 
-    // Events
+    // イベント
     public event Action<string> OnDataReceived;
     public event Action OnConnected;
     public event Action OnDisconnected;
 
+    // メインスレッドで処理を実行するためのキュー
     private ConcurrentQueue<string> mainThreadActionQueue = new ConcurrentQueue<string>();
     private ConcurrentQueue<string> dataQueue = new ConcurrentQueue<string>();
 
@@ -59,22 +64,24 @@ public class MicrobitBLEManager : MonoBehaviour
     private void Start()
     {
 #if ENABLE_WINMD_SUPPORT
+        // スキャンを開始
         StartScanning();
 #else
-        Debug.LogWarning("[MicrobitBLE] Setup required for Native Bluetooth on this platform. Use Editor Debug Keys (1, 2, 3).");
-        statusMessage = "Use Debug Keys (1, 2, 3)";
+        Debug.LogWarning("[MicrobitBLE] このプラットフォームでネイティブ Bluetooth を使用するにはセットアップが必要です。エディタのデバッグキー (1, 2, 3) を使用してください。");
+        statusMessage = "デバッグキー (1, 2, 3) を使用中";
 #endif
     }
 
     private void Update()
     {
-        // Dispatch events on main thread
+        // メインスレッドで受信データイベントをディスパッチ
         while (dataQueue.TryDequeue(out string data))
         {
             lastReceivedData = data;
             OnDataReceived?.Invoke(data);
         }
 
+        // メインスレッドでステータスメッセージを更新
         while (mainThreadActionQueue.TryDequeue(out string status))
         {
             statusMessage = status;
@@ -82,51 +89,52 @@ public class MicrobitBLEManager : MonoBehaviour
         }
 
 #if UNITY_EDITOR
-        // Debug inputs for testing without device
+        // デバイスがない状態でのテスト用デバッグ入力
         if (Input.GetKeyDown(KeyCode.Alpha1))
         {
             dataQueue.Enqueue("L");
-            mainThreadActionQueue.Enqueue("Debug: Sent L");
+            mainThreadActionQueue.Enqueue("デバッグ: 'L' (左) を受信");
         }
         if (Input.GetKeyDown(KeyCode.Alpha2))
         {
             dataQueue.Enqueue("R");
-            mainThreadActionQueue.Enqueue("Debug: Sent R");
+            mainThreadActionQueue.Enqueue("デバッグ: 'R' (右) を受信");
         }
         if (Input.GetKeyDown(KeyCode.Alpha3))
         {
             dataQueue.Enqueue("S");
-            mainThreadActionQueue.Enqueue("Debug: Sent S");
+            mainThreadActionQueue.Enqueue("デバッグ: 'S' (停止) を受信");
         }
 #endif
     }
 
+    /// <summary>
+    /// 対応する Bluetooth LE デバイスのスキャンを開始します。
+    /// </summary>
     public void StartScanning()
     {
 #if ENABLE_WINMD_SUPPORT
-        statusMessage = "Scanning for Micro:bit...";
+        statusMessage = "micro:bit を検索中...";
         string[] requestedProperties = { "System.Devices.Aep.DeviceAddress", "System.Devices.Aep.IsConnected" };
 
-        // Watch for Bluetooth LE devices
-        // Note: In a production app, you might want a more robust watcher or picker.
-        // For simplicity, we'll try to find a paired device or watch for advertisement.
-        // Using DeviceWatcher to find specifically the micro:bit efficiently.
-        
+        // Bluetooth LE デバイスを監視
+        // AQS (Advanced Query Syntax) を使用して BLE プロトコルを指定
         string aqs = "(System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-7950a0021805}\")";
         DeviceWatcher watcher = DeviceInformation.CreateWatcher(aqs, requestedProperties, DeviceInformationKind.AssociationEndpoint);
 
         watcher.Added += (DeviceWatcher sender, DeviceInformation deviceInfo) =>
         {
+            // デバイス名が指定の文字列で始まるものをターゲットとする
             if (deviceInfo.Name.StartsWith(targetDeviceNameStart))
             {
-                mainThreadActionQueue.Enqueue($"Found: {deviceInfo.Name}");
+                mainThreadActionQueue.Enqueue($"発見: {deviceInfo.Name}");
                 ConnectToDevice(deviceInfo.Id);
             }
         };
 
         watcher.Updated += (DeviceWatcher sender, DeviceInformationUpdate deviceInfoUpdate) =>
         {
-            // Handle updates if needed
+            // 必要に応じて更新処理を記述
         };
 
         watcher.Start();
@@ -134,44 +142,34 @@ public class MicrobitBLEManager : MonoBehaviour
     }
 
 #if ENABLE_WINMD_SUPPORT
+    /// <summary>
+    /// ID を使用して特定の Bluetooth デバイスに接続し、UART サービスをセットアップします。
+    /// </summary>
     private async void ConnectToDevice(string deviceId)
     {
         try
         {
-            // Stop scanning if possible, or just proceed. 
-            // In this simple example we don't hold a reference to watcher to stop it immediately, 
-            // but connecting usually works fine.
-
+            // デバイスのインスタンスを取得
             bluetoothDevice = await BluetoothLEDevice.FromIdAsync(deviceId);
             
             if (bluetoothDevice == null)
             {
-                mainThreadActionQueue.Enqueue("Failed to connect to device.");
+                mainThreadActionQueue.Enqueue("デバイスへの接続に失敗しました。");
                 return;
             }
 
-            mainThreadActionQueue.Enqueue($"Connected to {bluetoothDevice.Name}");
+            mainThreadActionQueue.Enqueue($"{bluetoothDevice.Name} に接続しました");
 
-            // Get GATT Services
+            // GATT サービスを取得
             GattDeviceServicesResult servicesResult = await bluetoothDevice.GetGattServicesAsync();
             
             if (servicesResult.Status == GattCommunicationStatus.Success)
             {
-                foreach (var service in servicesResult.Services)
-                {
-                    if (service.Uuid.ToString().ToUpper() == serviceUUID.Replace("-", "")) // format check might be needed
-                    {
-                        // Found UART Service (UUID comparison usually needs normalization)
-                        // Actually let's try FindAsync for specific service to be cleaner
-                    }
-                }
-
-                // Better way: get specific service
-                // Note: Guid.Parse needs the dashes usually.
+                // 特定のサービス UUID を検索
                 Guid serviceGuid;
                 if (!Guid.TryParse(serviceUUID, out serviceGuid))
                 {
-                     mainThreadActionQueue.Enqueue("Invalid Service UUID format");
+                     mainThreadActionQueue.Enqueue("サービス UUID の形式が不正です");
                      return;
                 }
 
@@ -179,9 +177,9 @@ public class MicrobitBLEManager : MonoBehaviour
                 if (serviceResult.Status == GattCommunicationStatus.Success && serviceResult.Services.Count > 0)
                 {
                     var service = serviceResult.Services[0];
-                    mainThreadActionQueue.Enqueue("Found UART Service");
+                    mainThreadActionQueue.Enqueue("UART サービスを検出");
 
-                    // Get Characteristics
+                    // キャラクタリスティック (特性) を取得
                     Guid txGuid;
                     Guid.TryParse(txCharUUID, out txGuid);
                     
@@ -191,51 +189,53 @@ public class MicrobitBLEManager : MonoBehaviour
                     {
                         txCharacteristic = charResult.Characteristics[0];
                         
-                        // Enable Notifications
+                        // 通知 (Notifications) を有効にする
                         var status = await txCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
                         
                         if (status == GattCommunicationStatus.Success)
                         {
                             txCharacteristic.ValueChanged += TxCharacteristic_ValueChanged;
                             isConnected = true;
-                            mainThreadActionQueue.Enqueue("Listening for data...");
-                            
-                            // Invoking event on main thread via update check or simple flag
-                            // Since we are async void, be careful.
+                            mainThreadActionQueue.Enqueue("データの受信待機中...");
+                            OnConnected?.Invoke();
                         }
                         else
                         {
-                            mainThreadActionQueue.Enqueue("Failed to enable notifications");
+                            mainThreadActionQueue.Enqueue("通知の有効化に失敗しました");
                         }
                     }
                     else
                     {
-                        mainThreadActionQueue.Enqueue("TX Characteristic not found");
+                        mainThreadActionQueue.Enqueue("TX 特性が見つかりません");
                     }
                 }
                 else
                 {
-                    mainThreadActionQueue.Enqueue("UART Service not found on device");
+                    mainThreadActionQueue.Enqueue("デバイス上に UART サービスが見つかりません");
                 }
             }
             else
             {
-                mainThreadActionQueue.Enqueue("Failed to get services");
+                mainThreadActionQueue.Enqueue("サービスの取得に失敗しました");
             }
         }
         catch (Exception ex)
         {
-            mainThreadActionQueue.Enqueue($"Connection Error: {ex.Message}");
+            mainThreadActionQueue.Enqueue($"接続エラー: {ex.Message}");
         }
     }
 
+    /// <summary>
+    /// キャラクタリスティックの値が変更された（通知を受信した）際のコールバック。
+    /// </summary>
     private void TxCharacteristic_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
     {
-        // Read data
+        // データの読み取り
         var reader = DataReader.FromBuffer(args.CharacteristicValue);
         byte[] input = new byte[reader.UnconsumedBufferLength];
         reader.ReadBytes(input);
         
+        // UTF8 文字列として解析しキューに追加
         string receivedString = Encoding.UTF8.GetString(input);
         dataQueue.Enqueue(receivedString);
     }
@@ -246,6 +246,7 @@ public class MicrobitBLEManager : MonoBehaviour
 #if ENABLE_WINMD_SUPPORT
         if (bluetoothDevice != null)
         {
+            // リソースの解放
             bluetoothDevice.Dispose();
             bluetoothDevice = null;
         }
