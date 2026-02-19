@@ -210,7 +210,11 @@ public class Avatar : NetworkBehaviour
     {
         byte[] fileData = File.ReadAllBytes(filePath);
         WWWForm form = new WWWForm();
-        form.AddBinaryData("file", fileData, Path.GetFileName(filePath), "model/gltf-binary");
+        // 日本語ファイル名によるエラー回避と、サーバー上でのファイル名衝突を防ぐため、
+        // GUIDを使用して一意かつ安全なファイル名を生成します。
+        string extension = Path.GetExtension(filePath);
+        string safeFileName = System.Guid.NewGuid().ToString() + extension;
+        form.AddBinaryData("file", fileData, safeFileName, "model/gltf-binary");
 
         using (UnityWebRequest www = UnityWebRequest.Post(ConnectionManager.Instance.serverUrl + "/upload", form))
         {
