@@ -36,8 +36,10 @@ public class MicrobitBLEManager : MonoBehaviour
 
     // イベント
     public event Action<string> OnDataReceived;
+#pragma warning disable 67
     public event Action OnConnected;
     public event Action OnDisconnected;
+#pragma warning restore 67
 
     // メインスレッドで処理を実行するためのキュー
     private ConcurrentQueue<string> mainThreadActionQueue = new ConcurrentQueue<string>();
