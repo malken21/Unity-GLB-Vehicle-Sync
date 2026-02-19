@@ -249,11 +249,36 @@ public class Avatar : NetworkBehaviour
                      loadUrl = responseText.Trim();
                 }
 
-                 if (!loadUrl.StartsWith("http"))
+                if (!loadUrl.StartsWith("http"))
                 {
                      loadUrl = $"{ConnectionManager.Instance.serverUrl}/{loadUrl}"; 
                 }
                 
+                // クライアントがアクセスできるように localhost を実際のIPに置換します
+                if (loadUrl.Contains("localhost") || loadUrl.Contains("127.0.0.1"))
+                {
+                    // serverUrl から IP を取得するか、ConnectionManager の解決済みIPを使用
+                    // 単純に serverUrl (IP解決済み想定) のホスト部分で置換する
+                    string currentServerUrl = ConnectionManager.Instance.serverUrl;
+                    if (!currentServerUrl.Contains("localhost") && !currentServerUrl.Contains("127.0.0.1"))
+                    {
+                        try 
+                        {
+                            Uri serverUri = new Uri(currentServerUrl);
+                            Uri loadUri = new Uri(loadUrl);
+                            
+                            // ポート番号も維持しつつホスト名を置換
+                            string newUrl = loadUrl.Replace(loadUri.Host, serverUri.Host);
+                            loadUrl = newUrl;
+                             Debug.Log($"[Avatar] Replaced localhost with {serverUri.Host} -> {loadUrl}");
+                        }
+                        catch(Exception e)
+                        {
+                             Debug.LogError($"[Avatar] Failed to replace localhost in URL: {e.Message}");
+                        }
+                    }
+                }
+
                 SetAvatarUrlServerRpc(loadUrl);
             }
         }
