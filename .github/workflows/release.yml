@@ -32,18 +32,35 @@ jobs:
           lfs: true
 
       - name: Cache Library
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: Library
-          key: Library-${{ matrix.name }}
+          key: Library-${{ matrix.name }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
+            Library-${{ matrix.name }}-
             Library-
+
+      - name: Cache LFS
+        uses: actions/cache@v4
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.gitattributes') }}
+          restore-keys: |
+            lfs-
+
+      - name: Run tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build project
         uses: game-ci/unity-builder@v4
         with:
           buildProfile: ${{ matrix.profilePath }}
-          unityVersion: 6000.2.15f1
           buildName: ${{ matrix.name }}
 
       - name: Zip Build
