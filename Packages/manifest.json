@@ -1,6 +1,5 @@
 {
   "dependencies": {
-    "com.gamelovers.mcp-unity": "https://github.com/CoderGamester/mcp-unity.git",
     "com.unity.ai.navigation": "2.0.10",
     "com.unity.cloud.gltfast": "6.15.1",
     "com.unity.cloud.ktx": "3.6.2",
@@ -51,5 +50,15 @@
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
     "com.unity.modules.xr": "1.0.0"
-  }
+  },
+  "scopedRegistries": [
+    {
+      "name": "OpenUPM",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "io.github.hatayama.uloopmcp",
+        "org.nuget"
+      ]
+    }
+  ]
 }
