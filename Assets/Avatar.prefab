@@ -144,6 +144,7 @@ GameObject:
   - component: {fileID: 4529568741319297461}
   - component: {fileID: 6189257738961732581}
   - component: {fileID: 4269160822374962831}
+  - component: {fileID: -4221176684486193816}
   m_Layer: 0
   m_Name: Avatar
   m_TagString: Untagged
@@ -181,7 +182,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3307858247
+  GlobalObjectIdHash: 309094343
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -320,6 +321,20 @@ MonoBehaviour:
   pGain: 1
   iGain: 0
   dGain: 0.1
+--- !u!114 &-4221176684486193816
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9030851858174537478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10d5d6bc10f1fdd4590e9082a4f28568, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MicrobitAvatarController
+  ShowTopMostFoldoutHeaderGroup: 1
+  targetBallRenderer: {fileID: 0}
 --- !u!1001 &1181857983095725674
 PrefabInstance:
   m_ObjectHideFlags: 0
