@@ -8,46 +8,183 @@ Shader "Custom/Rainbow"
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
-        LOD 200
-
-        CGPROGRAM
-        #pragma surface surf UnlitShadows fullforwardshadows addshadow
-
-        #pragma target 3.0
-
-        struct Input
+        Tags
         {
-            float2 uv_MainTex;
-        };
+            "RenderType" = "Opaque"
+            "RenderPipeline" = "UniversalPipeline"
+            "Queue" = "Geometry"
+        }
+        LOD 300
 
-        float _Hue;
-        float _Saturation;
-        float _Value;
-
-        inline fixed4 LightingUnlitShadows(SurfaceOutput s, fixed3 lightDir, fixed atten)
+        Pass
         {
-            fixed4 c;
-            c.rgb = s.Albedo * atten;
-            c.a = s.Alpha;
-            return c;
+            Name "ForwardLit"
+            Tags { "LightMode" = "UniversalForward" }
+
+            HLSLPROGRAM
+            #pragma target 3.0
+            #pragma vertex vert
+            #pragma fragment frag
+
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS 
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT
+            #pragma multi_compile_fog
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+
+            struct Attributes
+            {
+                float4 positionOS   : POSITION;
+                float3 normalOS     : NORMAL;
+            };
+
+            struct Varyings
+            {
+                float4 positionCS   : SV_POSITION;
+                float3 positionWS   : TEXCOORD0;
+                float3 normalWS     : TEXCOORD1;
+            };
+
+            CBUFFER_START(UnityPerMaterial)
+                float _Hue;
+                float _Saturation;
+                float _Value;
+            CBUFFER_END
+
+            // HSV to RGB conversion helper
+            float3 hsv2rgb(float3 c)
+            {
+                float4 K = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+                float3 p = abs(frac(c.xxx + K.xyz) * 6.0 - K.www);
+                return c.z * lerp(K.xxx, saturate(p - K.xxx), c.y);
+            }
+
+            Varyings vert(Attributes input)
+            {
+                Varyings output = (Varyings)0;
+                VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
+                VertexNormalInputs normalInput = GetVertexNormalInputs(input.normalOS, float4(1.0, 1.0, 1.0, 1.0));
+
+                output.positionCS = vertexInput.positionCS;
+                output.positionWS = vertexInput.positionWS;
+                output.normalWS = normalInput.normalWS;
+
+                return output;
+            }
+
+            half4 frag(Varyings input) : SV_Target
+            {
+                float3 rgbColor = hsv2rgb(float3(_Hue, _Saturation, _Value));
+
+                InputData inputData = (InputData)0;
+                inputData.positionWS = input.positionWS;
+                inputData.normalWS = normalize(input.normalWS);
+                inputData.viewDirectionWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
+                inputData.shadowCoord = TransformWorldToShadowCoord(input.positionWS);
+
+                SurfaceData surfaceData = (SurfaceData)0;
+                surfaceData.albedo = rgbColor;
+                surfaceData.alpha = 1.0;
+                surfaceData.metallic = 0.0;
+                surfaceData.specular = half3(0.0, 0.0, 0.0);
+                surfaceData.smoothness = 0.0;
+                surfaceData.emission = 0;
+                surfaceData.occlusion = 1.0;
+
+                half4 color = UniversalFragmentBlinnPhong(inputData, surfaceData);
+                return color;
+            }
+            ENDHLSL
         }
 
-        // HSV to RGB conversion helper
-        fixed3 hsv2rgb(float3 c)
+        Pass
         {
-            fixed4 K = fixed4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-            fixed3 p = abs(frac(c.xxx + K.xyz) * 6.0 - K.www);
-            return c.z * lerp(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+            Name "ShadowCaster"
+            Tags{"LightMode" = "ShadowCaster"}
+
+            ZWrite On
+            ZTest LEqual
+            ColorMask 0
+
+            HLSLPROGRAM
+            #pragma target 3.0
+            #pragma vertex ShadowPassVertex
+            #pragma fragment ShadowPassFragment
+
+            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+
+            struct Attributes
+            {
+                float4 positionOS   : POSITION;
+                float3 normalOS     : NORMAL;
+            };
+
+            struct Varyings
+            {
+                float4 positionCS   : SV_POSITION;
+            };
+
+            float3 _LightDirection;
+            float3 _LightPosition;
+
+            Varyings ShadowPassVertex(Attributes input)
+            {
+                Varyings output = (Varyings)0;
+                output.positionCS = GetShadowPositionHClip(input.positionOS, input.normalOS);
+                return output;
+            }
+
+            half4 ShadowPassFragment(Varyings input) : SV_Target
+            {
+                return 0;
+            }
+            ENDHLSL
         }
 
-        void surf (Input IN, inout SurfaceOutput o)
+        Pass
         {
-            fixed3 rgb = hsv2rgb(float3(_Hue, _Saturation, _Value));
-            o.Albedo = rgb;
-            o.Alpha = 1.0;
+            Name "DepthOnly"
+            Tags{"LightMode" = "DepthOnly"}
+
+            ZWrite On
+            ColorMask 0
+
+            HLSLPROGRAM
+            #pragma target 3.0
+            #pragma vertex DepthOnlyVertex
+            #pragma fragment DepthOnlyFragment
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            struct Attributes
+            {
+                float4 position     : POSITION;
+            };
+
+            struct Varyings
+            {
+                float4 positionCS   : SV_POSITION;
+            };
+
+            Varyings DepthOnlyVertex(Attributes input)
+            {
+                Varyings output = (Varyings)0;
+                output.positionCS = TransformObjectToHClip(input.position.xyz);
+                return output;
+            }
+
+            half4 DepthOnlyFragment(Varyings input) : SV_Target
+            {
+                return 0;
+            }
+            ENDHLSL
         }
-        ENDCG
     }
-    FallBack "Diffuse"
 }
