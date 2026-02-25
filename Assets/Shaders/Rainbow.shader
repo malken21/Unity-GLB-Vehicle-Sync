@@ -5,8 +5,6 @@ Shader "Custom/Rainbow"
         _Hue ("Hue", Range(0, 1)) = 0
         _Saturation ("Saturation", Range(0, 1)) = 1
         _Value ("Value", Range(0, 1)) = 1
-        _Glossiness ("Smoothness", Range(0,1)) = 0.5
-        _Metallic ("Metallic", Range(0,1)) = 0.0
     }
     SubShader
     {
@@ -14,10 +12,8 @@ Shader "Custom/Rainbow"
         LOD 200
 
         CGPROGRAM
-        // Standard lighting model, and enable shadows on all light types
-        #pragma surface surf Standard fullforwardshadows
+        #pragma surface surf UnlitShadows fullforwardshadows addshadow
 
-        // Use shader model 3.0 target, to get nicer looking lighting
         #pragma target 3.0
 
         struct Input
@@ -28,8 +24,14 @@ Shader "Custom/Rainbow"
         float _Hue;
         float _Saturation;
         float _Value;
-        half _Glossiness;
-        half _Metallic;
+
+        inline fixed4 LightingUnlitShadows(SurfaceOutput s, fixed3 lightDir, fixed atten)
+        {
+            fixed4 c;
+            c.rgb = s.Albedo * atten;
+            c.a = s.Alpha;
+            return c;
+        }
 
         // HSV to RGB conversion helper
         fixed3 hsv2rgb(float3 c)
@@ -39,12 +41,10 @@ Shader "Custom/Rainbow"
             return c.z * lerp(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
         }
 
-        void surf (Input IN, inout SurfaceOutputStandard o)
+        void surf (Input IN, inout SurfaceOutput o)
         {
             fixed3 rgb = hsv2rgb(float3(_Hue, _Saturation, _Value));
             o.Albedo = rgb;
-            o.Metallic = _Metallic;
-            o.Smoothness = _Glossiness;
             o.Alpha = 1.0;
         }
         ENDCG

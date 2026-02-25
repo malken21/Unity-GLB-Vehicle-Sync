@@ -20,6 +20,9 @@ public class Avatar : NetworkBehaviour
     // アバターの可視性を同期します
     private readonly NetworkVariable<bool> isVisibleNetwork = new NetworkVariable<bool>(true);
 
+    // 他プレイヤーを非表示にする設定（ローカルのみ）
+    public static bool s_hideOtherPlayers = false;
+
     private Vector3 initialPosition;
 
     public override void OnNetworkSpawn()
@@ -40,7 +43,7 @@ public class Avatar : NetworkBehaviour
         }
 
         // 初期可視性の適用
-        UpdateVisibility(isVisibleNetwork.Value);
+        UpdateLocalVisibility();
 
         if (IsOwner)
         {
@@ -162,20 +165,26 @@ public class Avatar : NetworkBehaviour
 
     private void OnVisibilityChanged(bool previousValue, bool newValue)
     {
-        UpdateVisibility(newValue);
+        UpdateLocalVisibility();
     }
 
-    private void UpdateVisibility(bool isVisible)
+    public void UpdateLocalVisibility()
     {
+        bool targetVisibility = isVisibleNetwork.Value;
+        if (!IsOwner && s_hideOtherPlayers)
+        {
+            targetVisibility = false;
+        }
+
         foreach (var r in GetComponentsInChildren<Renderer>(true)) // include inactive incase they were disabled
         {
-            r.enabled = isVisible;
+            r.enabled = targetVisibility;
         }
         foreach (var c in GetComponentsInChildren<Collider>(true))
         {
-            c.enabled = isVisible;
+            c.enabled = targetVisibility;
         }
-        Debug.Log($"[Avatar] Visibility updated to: {isVisible}");
+        Debug.Log($"[Avatar] Visibility updated to: {targetVisibility}");
     }
 
     private void UpdateModelTransform()
@@ -374,7 +383,7 @@ public class Avatar : NetworkBehaviour
             UpdateModelTransform();
 
             // 読み込み完了後に現在の可視性設定を適用します
-            UpdateVisibility(isVisibleNetwork.Value);
+            UpdateLocalVisibility();
 
             Debug.Log($"アバターを正常に読み込みました: {url}");
         }
@@ -474,6 +483,16 @@ public class Avatar : NetworkBehaviour
     {
         if (IsOwner)
         {
+            if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.hKey.wasPressedThisFrame)
+            {
+                s_hideOtherPlayers = !s_hideOtherPlayers;
+                Debug.Log($"[Avatar] Toggle other players visibility: {!s_hideOtherPlayers}");
+                foreach (var avatar in FindObjectsOfType<Avatar>())
+                {
+                    avatar.UpdateLocalVisibility();
+                }
+            }
+
             // 矢印キーでのスケール（上/下）と回転（左/右）の操作
             HandleManualAdjustments();
 
