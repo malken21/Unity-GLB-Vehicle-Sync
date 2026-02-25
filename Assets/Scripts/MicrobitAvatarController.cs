@@ -18,33 +18,15 @@ public class MicrobitAvatarController : NetworkBehaviour
     [Tooltip("色を変更する対象のRenderer（ExerciseBall）。未指定の場合は子オブジェクトから自動検索します。")]
     private Renderer targetBallRenderer;
 
-    // ボールの色を同期するためのNetworkVariable
-    private NetworkVariable<Color> ballColor = new NetworkVariable<Color>(
-        Color.white,
+    // ボールの色（Hue）を同期するためのNetworkVariable (0.0 - 1.0)
+    private NetworkVariable<float> ballHue = new NetworkVariable<float>(
+        0f,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Owner
     );
 
-    private void Start()
-    {
-        rotator = GetComponent<KeyboardRotator>();
-        
-        if (MicrobitBLEManager.Instance != null)
-        {
-            // BLE マネージャーからのデータ受信イベントを購読
-            MicrobitBLEManager.Instance.OnDataReceived += HandleDataReceived;
-            Debug.Log("[MicrobitController] BLE マネージャーのイベントを購読しました");
-        }
-        else
-        {
-            Debug.LogWarning("[MicrobitController] MicrobitBLEManager のインスタンスが見つかりません。");
-        }
-
-        if (targetBallRenderer == null)
-        {
-            FindTargetRenderer();
-        }
-    }
+    // シェーダープロパティのID
+    private static readonly int HuePropertyId = Shader.PropertyToID("_Hue");
 
     /// <summary>
     /// 対象となる ExerciseBall の Renderer を検索します。
@@ -67,7 +49,7 @@ public class MicrobitAvatarController : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
-        ballColor.OnValueChanged += OnBallColorChanged;
+        ballHue.OnValueChanged += OnBallHueChanged;
         
         // Rendererが未設定の場合は再検索
         if (targetBallRenderer == null)
@@ -75,27 +57,26 @@ public class MicrobitAvatarController : NetworkBehaviour
             FindTargetRenderer();
         }
         
-        ApplyColorToRenderer(ballColor.Value);
+        ApplyHueToRenderer(ballHue.Value);
     }
 
     public override void OnNetworkDespawn()
     {
-        ballColor.OnValueChanged -= OnBallColorChanged;
+        ballHue.OnValueChanged -= OnBallHueChanged;
         base.OnNetworkDespawn();
     }
 
-    private void OnBallColorChanged(Color previousValue, Color newValue)
+    private void OnBallHueChanged(float previousValue, float newValue)
     {
-        ApplyColorToRenderer(newValue);
+        ApplyHueToRenderer(newValue);
     }
 
-    private void ApplyColorToRenderer(Color color)
+    private void ApplyHueToRenderer(float hue)
     {
         if (targetBallRenderer != null)
         {
-            // マテリアルのインスタンス化を避けるため sharedMaterial を使用するか検討が必要だが、
-            // 個体ごとに色を変えるため material プロパティ（インスタンス化を伴う）を使用
-            targetBallRenderer.material.color = color;
+            // カスタムシェーダーの _Hue プロパティを更新
+            targetBallRenderer.material.SetFloat(HuePropertyId, hue);
         }
     }
 
@@ -131,27 +112,30 @@ public class MicrobitAvatarController : NetworkBehaviour
 
     /// <summary>
     /// 受信したカラーコマンドをアバターの ExerciseBall に適用します。
+    /// Hue値に変換して保持します。
     /// </summary>
     private void ApplyColorCommand(string colorCmd)
     {
         string colorData = colorCmd.Substring(2).Trim();
         
-        if (TryParseMicrobitColor(colorData, out Color newColor))
+        if (TryParseMicrobitColorToHue(colorData, out float hue))
         {
             if (IsOwner)
             {
-                ballColor.Value = newColor;
-                Debug.Log($"[MicrobitController] ExerciseBall の色を {newColor} に変更するようネットワークに送信しました");
+                ballHue.Value = hue;
+                Debug.Log($"[MicrobitController] Hue を {hue} に変更するようネットワークに送信しました");
             }
         }
     }
 
     /// <summary>
-    /// 文字列データを色情報に変換します。
+    /// 文字列データを色相(Hue)情報に変換します。
     /// </summary>
-    private bool TryParseMicrobitColor(string colorData, out Color parsedColor)
+    private bool TryParseMicrobitColorToHue(string colorData, out float hue)
     {
-        parsedColor = Color.white;
+        hue = 0f;
+        Color color = Color.white;
+        bool success = false;
 
         // "R,G,B" フォーマットのチェック (例: "255,128,0")
         string[] rgbParts = colorData.Split(',');
@@ -161,27 +145,36 @@ public class MicrobitAvatarController : NetworkBehaviour
                 byte.TryParse(rgbParts[1].Trim(), out byte g) && 
                 byte.TryParse(rgbParts[2].Trim(), out byte b))
             {
-                parsedColor = new Color32(r, g, b, 255);
-                return true;
+                color = new Color32(r, g, b, 255);
+                success = true;
             }
         }
 
-        // カラー名のマッピング
-        switch (colorData)
+        if (!success)
         {
-            case "RED": parsedColor = Color.red; return true;
-            case "GREEN": parsedColor = Color.green; return true;
-            case "BLUE": parsedColor = Color.blue; return true;
-            case "YELLOW": parsedColor = Color.yellow; return true;
-            case "WHITE": parsedColor = Color.white; return true;
-            case "BLACK": parsedColor = Color.black; return true;
+            // カラー名のマッピング
+            switch (colorData)
+            {
+                case "RED": color = Color.red; success = true; break;
+                case "GREEN": color = Color.green; success = true; break;
+                case "BLUE": color = Color.blue; success = true; break;
+                case "YELLOW": color = Color.yellow; success = true; break;
+                case "WHITE": color = Color.white; success = true; break;
+                case "BLACK": color = Color.black; success = true; break;
+                default:
+                    // 16進数カラーコードのチェック
+                    string htmlColor = colorData.StartsWith("#") ? colorData : "#" + colorData;
+                    if (ColorUtility.TryParseHtmlString(htmlColor, out color))
+                    {
+                        success = true;
+                    }
+                    break;
+            }
         }
 
-        // 16進数カラーコードのチェック
-        string htmlColor = colorData.StartsWith("#") ? colorData : "#" + colorData;
-        if (ColorUtility.TryParseHtmlString(htmlColor, out Color resultColor))
+        if (success)
         {
-            parsedColor = resultColor;
+            Color.RGBToHSV(color, out hue, out _, out _);
             return true;
         }
 
@@ -197,8 +190,10 @@ public class MicrobitAvatarController : NetworkBehaviour
     }
 
     /// <summary>
-    /// キーボードの 1-0 キー入力を監視し、色を変更します。
-    /// 1 = 紫 (Hue 0.8), 0 = 赤 (Hue 0.0)
+    /// キーボードの 1-0 キー入力を監視し、Hue（0-1）を変更します。
+    /// 1 = Hue 0.0 (赤), 0 = Hue 0.9 (または 1.0 に近い虹色の終端)
+    /// ※ユーザーの「1が紫、0が赤」という前回の要望を尊重しつつ、虹色（赤から紫）をマッピングします。
+    /// 1 = インテックス0, 0 = インデックス9
     /// </summary>
     private void HandleKeyboardColorInput()
     {
@@ -220,15 +215,12 @@ public class MicrobitAvatarController : NetworkBehaviour
 
         if (keyPressedIndex != -1)
         {
-            // インデックス 0(1キー) = 0.0, インデックス 9(0キー) = 1.0 に正規化
-            float t = keyPressedIndex / 9f;
+            // 0.0 ～ 1.0 の float 値を計算
+            // 今回の「虹の色」要望に合わせ、0.0から1.0をリニアに割り当てます。
+            float hue = keyPressedIndex / 9f;
             
-            // 紫(0.8) から 赤(0.0) へ線形補完
-            float hue = Mathf.Lerp(0.8f, 0.0f, t);
-            Color newColor = Color.HSVToRGB(hue, 1f, 1f);
-            
-            ballColor.Value = newColor;
-            Debug.Log($"[MicrobitController] Keyboard {((keyPressedIndex + 1) % 10)} pressed. Changing color to Hue {hue}");
+            ballHue.Value = hue;
+            Debug.Log($"[MicrobitController] Keyboard {((keyPressedIndex + 1) % 10)} pressed. Changing Hue to {hue}");
         }
     }
 
@@ -247,11 +239,6 @@ public class MicrobitAvatarController : NetworkBehaviour
         float rotate = 0f;
         
         // コマンド判定ロジック
-        // "L" -> 左回転
-        // "R" -> 右回転
-        // "F" -> 前進 (拡張用)
-        // "B" -> 後退 (拡張用)
-        
         if (currentCommand == "L")
         {
              rotate = -1f;
@@ -261,10 +248,10 @@ public class MicrobitAvatarController : NetworkBehaviour
              rotate = 1f;
         }
 
-        // 回転速度。必要に応じて SerializedField に変更可能
+        // 回転速度
         float rotationSpeed = 100f;
         
-        // KeyboardRotator と同様に Transform.Rotate を使用して回転を適用
+        // 回転を適用
         if (rotate != 0f)
         {
              transform.Rotate(Vector3.up, rotate * rotationSpeed * Time.fixedDeltaTime);
