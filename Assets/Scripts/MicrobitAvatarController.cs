@@ -47,24 +47,20 @@ public class MicrobitAvatarController : NetworkBehaviour
     }
 
     /// <summary>
-    /// 対象となる ExerciseBall の Renderer を子階層から検索します。
+    /// 対象となる ExerciseBall の Renderer を検索します。
     /// </summary>
     private void FindTargetRenderer()
     {
-        Transform ballTransform = transform.Find("Avatar/ExerciseBall");
-        if (ballTransform == null)
-        {
-            ballTransform = transform.Find("ExerciseBall");
-        }
-
-        if (ballTransform != null)
-        {
-            targetBallRenderer = ballTransform.GetComponent<Renderer>();
-        }
+        // 階層を問わず子オブジェクトから Renderer を検索
+        targetBallRenderer = GetComponentInChildren<Renderer>();
         
-        if (targetBallRenderer == null)
+        if (targetBallRenderer != null)
         {
-            Debug.LogWarning("[MicrobitController] 対象の ExerciseBall Renderer が見つかりませんでした。");
+            Debug.Log($"[MicrobitController] 対象の Renderer を検出しました: {targetBallRenderer.gameObject.name}");
+        }
+        else
+        {
+            Debug.LogWarning("[MicrobitController] 対象の Renderer が見つかりませんでした。");
         }
     }
 
@@ -73,10 +69,12 @@ public class MicrobitAvatarController : NetworkBehaviour
         base.OnNetworkSpawn();
         ballColor.OnValueChanged += OnBallColorChanged;
         
+        // Rendererが未設定の場合は再検索
         if (targetBallRenderer == null)
         {
             FindTargetRenderer();
         }
+        
         ApplyColorToRenderer(ballColor.Value);
     }
 
@@ -93,8 +91,10 @@ public class MicrobitAvatarController : NetworkBehaviour
 
     private void ApplyColorToRenderer(Color color)
     {
-        if (targetBallRenderer != null && targetBallRenderer.material != null)
+        if (targetBallRenderer != null)
         {
+            // マテリアルのインスタンス化を避けるため sharedMaterial を使用するか検討が必要だが、
+            // 個体ごとに色を変えるため material プロパティ（インスタンス化を伴う）を使用
             targetBallRenderer.material.color = color;
         }
     }
@@ -186,6 +186,50 @@ public class MicrobitAvatarController : NetworkBehaviour
         }
 
         return false;
+    }
+
+    private void Update()
+    {
+        // ネットワーク上の所有者（Owner）でない場合は処理しない
+        if (!IsOwner) return;
+
+        HandleKeyboardColorInput();
+    }
+
+    /// <summary>
+    /// キーボードの 1-0 キー入力を監視し、色を変更します。
+    /// 1 = 紫 (Hue 0.8), 0 = 赤 (Hue 0.0)
+    /// </summary>
+    private void HandleKeyboardColorInput()
+    {
+        if (UnityEngine.InputSystem.Keyboard.current == null) return;
+
+        int keyPressedIndex = -1; // 0-9
+        var kb = UnityEngine.InputSystem.Keyboard.current;
+
+        if (kb.digit1Key.wasPressedThisFrame) keyPressedIndex = 0;
+        else if (kb.digit2Key.wasPressedThisFrame) keyPressedIndex = 1;
+        else if (kb.digit3Key.wasPressedThisFrame) keyPressedIndex = 2;
+        else if (kb.digit4Key.wasPressedThisFrame) keyPressedIndex = 3;
+        else if (kb.digit5Key.wasPressedThisFrame) keyPressedIndex = 4;
+        else if (kb.digit6Key.wasPressedThisFrame) keyPressedIndex = 5;
+        else if (kb.digit7Key.wasPressedThisFrame) keyPressedIndex = 6;
+        else if (kb.digit8Key.wasPressedThisFrame) keyPressedIndex = 7;
+        else if (kb.digit9Key.wasPressedThisFrame) keyPressedIndex = 8;
+        else if (kb.digit0Key.wasPressedThisFrame) keyPressedIndex = 9;
+
+        if (keyPressedIndex != -1)
+        {
+            // インデックス 0(1キー) = 0.0, インデックス 9(0キー) = 1.0 に正規化
+            float t = keyPressedIndex / 9f;
+            
+            // 紫(0.8) から 赤(0.0) へ線形補完
+            float hue = Mathf.Lerp(0.8f, 0.0f, t);
+            Color newColor = Color.HSVToRGB(hue, 1f, 1f);
+            
+            ballColor.Value = newColor;
+            Debug.Log($"[MicrobitController] Keyboard {((keyPressedIndex + 1) % 10)} pressed. Changing color to Hue {hue}");
+        }
     }
 
     private void FixedUpdate()

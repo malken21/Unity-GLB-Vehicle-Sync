@@ -136,13 +136,13 @@ public class MicrobitBLEManager : MonoBehaviour
         var keyboard = UnityEngine.InputSystem.Keyboard.current;
         if (keyboard == null) return;
 
-        if (keyboard.digit1Key.wasPressedThisFrame) EnqueueDebugCommand("L", "左");
-        else if (keyboard.digit2Key.wasPressedThisFrame) EnqueueDebugCommand("R", "右");
-        else if (keyboard.digit3Key.wasPressedThisFrame) EnqueueDebugCommand("S", "停止");
-        else if (keyboard.digit4Key.wasPressedThisFrame) EnqueueDebugCommand("C:RED", "赤色変更");
-        else if (keyboard.digit5Key.wasPressedThisFrame) EnqueueDebugCommand("C:BLUE", "青色変更");
-        else if (keyboard.digit6Key.wasPressedThisFrame) EnqueueDebugCommand("C:GREEN", "緑色変更");
-        else if (keyboard.digit7Key.wasPressedThisFrame) EnqueueDebugCommand("C:255,128,0", "RGB直接指定");
+        if (keyboard.f1Key.wasPressedThisFrame) EnqueueDebugCommand("L", "左");
+        else if (keyboard.f2Key.wasPressedThisFrame) EnqueueDebugCommand("R", "右");
+        else if (keyboard.f3Key.wasPressedThisFrame) EnqueueDebugCommand("S", "停止");
+        else if (keyboard.f4Key.wasPressedThisFrame) EnqueueDebugCommand("C:RED", "赤色変更");
+        else if (keyboard.f5Key.wasPressedThisFrame) EnqueueDebugCommand("C:BLUE", "青色変更");
+        else if (keyboard.f6Key.wasPressedThisFrame) EnqueueDebugCommand("C:GREEN", "緑色変更");
+        else if (keyboard.f7Key.wasPressedThisFrame) EnqueueDebugCommand("C:255,128,0", "RGB直接指定");
     }
 
     private void EnqueueDebugCommand(string command, string description)
