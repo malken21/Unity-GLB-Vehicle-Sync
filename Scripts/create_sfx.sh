@@ -22,18 +22,8 @@ cd "$BUILD_DIR"
 cd ..
 
 echo "SFXモジュールをダウンロード中..."
-# 7zSD.sfx（Windows 32/64ビット互換）の複数のソースを試行
-SFS_URLS=(
-    "https://raw.githubusercontent.com/chrislake/7zip-sfx-builder/master/7zSD.sfx"
-    "https://github.com/myfreeer/7z-sfx-extra/releases/download/v1.7.1-51/7zS2.sfx"
-)
-
-for url in "${SFS_URLS[@]}"; do
-    if wget "$url" -O 7zSD.sfx; then
-        echo "$url からSFXモジュールをダウンロード完了"
-        break
-    fi
-done
+wget -q https://www.7-zip.org/a/lzma2409.7z -O lzma.7z
+7z e lzma.7z bin/7zSD.sfx -y
 
 if [ ! -f "7zSD.sfx" ]; then
     echo "エラー: SFXモジュールのダウンロードに失敗。"
@@ -51,6 +41,6 @@ echo "$OUTPUT_NAME へのパッケージングを実行中..."
 cat 7zSD.sfx sfx_config.txt build.7z > "$OUTPUT_NAME"
 
 # クリーンアップ
-rm build.7z 7zSD.sfx sfx_config.txt
+rm -f build.7z 7zSD.sfx sfx_config.txt lzma.7z
 
 echo "完了: $OUTPUT_NAME"
