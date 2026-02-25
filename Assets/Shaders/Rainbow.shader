@@ -137,7 +137,24 @@ Shader "Custom/Rainbow"
             Varyings ShadowPassVertex(Attributes input)
             {
                 Varyings output = (Varyings)0;
-                output.positionCS = GetShadowPositionHClip(input.positionOS, input.normalOS);
+                float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+
+#if _CASTING_PUNCTUAL_LIGHT_SHADOW
+                float3 lightDirectionWS = normalize(_LightPosition - positionWS);
+#else
+                float3 lightDirectionWS = _LightDirection;
+#endif
+
+                float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, lightDirectionWS));
+
+#if UNITY_REVERSED_Z
+                positionCS.z = min(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE);
+#else
+                positionCS.z = max(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE);
+#endif
+
+                output.positionCS = positionCS;
                 return output;
             }
 
