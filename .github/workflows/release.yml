@@ -59,6 +59,11 @@ jobs:
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Discard changes
+        run: |
+          git checkout -- .
+          git clean -fd
+
       - name: Build project
         uses: game-ci/unity-builder@v4
         with:
