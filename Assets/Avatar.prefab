@@ -254,6 +254,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Avatar
   ShowTopMostFoldoutHeaderGroup: 1
   customModelParent: {fileID: 8070418163313021191}
+  urpLitShader: {fileID: 0}
 --- !u!54 &4529568741319297461
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -316,8 +317,9 @@ MonoBehaviour:
   rotationSpeed: 100
   wsAxis: {x: 0, y: 0, z: 1}
   adAxis: {x: 0, y: 1, z: 0}
-  resistanceCoefficient: 1.5
-  minResistance: 0.05
+  pGain: 1
+  iGain: 0
+  dGain: 0.1
 --- !u!1001 &1181857983095725674
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -53,6 +53,9 @@ basic.forever(function () {
         bluetooth.uartWriteString("L")
     } else if (input.buttonIsPressed(Button.B)) {
         bluetooth.uartWriteString("R")
+    } else if (input.logoIsPressed()) {
+        // ロゴタッチで色をランダムまたは特定の色に変更する例
+        bluetooth.uartWriteString("C:RED")
     } else {
         bluetooth.uartWriteString("S")
     }

@@ -13,6 +13,11 @@ public class MicrobitAvatarController : NetworkBehaviour
     // 現在のコマンド (S = 停止)
     private string currentCommand = "S";
 
+    [Header("コンポーネント設定")]
+    [SerializeField]
+    [Tooltip("色を変更する対象のRenderer（ExerciseBall）。未指定の場合は子オブジェクトから自動検索します。")]
+    private Renderer targetBallRenderer;
+
     private void Start()
     {
         rotator = GetComponent<KeyboardRotator>();
@@ -26,6 +31,33 @@ public class MicrobitAvatarController : NetworkBehaviour
         else
         {
             Debug.LogWarning("[MicrobitController] MicrobitBLEManager のインスタンスが見つかりません。");
+        }
+
+        if (targetBallRenderer == null)
+        {
+            FindTargetRenderer();
+        }
+    }
+
+    /// <summary>
+    /// 対象となる ExerciseBall の Renderer を子階層から検索します。
+    /// </summary>
+    private void FindTargetRenderer()
+    {
+        Transform ballTransform = transform.Find("Avatar/ExerciseBall");
+        if (ballTransform == null)
+        {
+            ballTransform = transform.Find("ExerciseBall");
+        }
+
+        if (ballTransform != null)
+        {
+            targetBallRenderer = ballTransform.GetComponent<Renderer>();
+        }
+        
+        if (targetBallRenderer == null)
+        {
+            Debug.LogWarning("[MicrobitController] 対象の ExerciseBall Renderer が見つかりませんでした。");
         }
     }
 
@@ -44,8 +76,80 @@ public class MicrobitAvatarController : NetworkBehaviour
     /// </summary>
     private void HandleDataReceived(string data)
     {
-        // 文字列のトリミング（改行コードの削除など）と大文字化
-        currentCommand = data.Trim().ToUpper();
+        data = data.Trim().ToUpper();
+        
+        if (data.StartsWith("C:"))
+        {
+            ApplyColorCommand(data);
+        }
+        else
+        {
+            // 回転等のコマンド用
+            currentCommand = data;
+        }
+    }
+
+    /// <summary>
+    /// 受信したカラーコマンドをアバターの ExerciseBall に適用します。
+    /// </summary>
+    private void ApplyColorCommand(string colorCmd)
+    {
+        string colorData = colorCmd.Substring(2).Trim();
+        
+        if (TryParseMicrobitColor(colorData, out Color newColor))
+        {
+            if (targetBallRenderer != null && targetBallRenderer.material != null)
+            {
+                targetBallRenderer.material.color = newColor;
+                Debug.Log($"[MicrobitController] ExerciseBall の色を {newColor} に変更しました");
+            }
+            else
+            {
+                Debug.LogWarning("[MicrobitController] 対象のRendererが設定されていないため色を変更できません");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 文字列データを色情報に変換します。
+    /// </summary>
+    private bool TryParseMicrobitColor(string colorData, out Color parsedColor)
+    {
+        parsedColor = Color.white;
+
+        // "R,G,B" フォーマットのチェック (例: "255,128,0")
+        string[] rgbParts = colorData.Split(',');
+        if (rgbParts.Length == 3)
+        {
+            if (byte.TryParse(rgbParts[0].Trim(), out byte r) && 
+                byte.TryParse(rgbParts[1].Trim(), out byte g) && 
+                byte.TryParse(rgbParts[2].Trim(), out byte b))
+            {
+                parsedColor = new Color32(r, g, b, 255);
+                return true;
+            }
+        }
+
+        // カラー名のマッピング
+        switch (colorData)
+        {
+            case "RED": parsedColor = Color.red; return true;
+            case "GREEN": parsedColor = Color.green; return true;
+            case "BLUE": parsedColor = Color.blue; return true;
+            case "YELLOW": parsedColor = Color.yellow; return true;
+            case "WHITE": parsedColor = Color.white; return true;
+            case "BLACK": parsedColor = Color.black; return true;
+        }
+
+        // 16進数カラーコードのチェック
+        string htmlColor = colorData.StartsWith("#") ? colorData : "#" + colorData;
+        if (ColorUtility.TryParseHtmlString(htmlColor, out Color resultColor))
+        {
+            parsedColor = resultColor;
+            return true;
+        }
+
+        return false;
     }
 
     private void FixedUpdate()

@@ -29,6 +29,9 @@ public class MicrobitBLEManager : MonoBehaviour
     [SerializeField] private string txCharUUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E";
 #endif
 
+    [Header("連携機能の有効/無効")]
+    public bool enableMicrobit = true;
+
     [Header("ステータス")]
     public bool isConnected = false;
     public string lastReceivedData = "";
@@ -56,6 +59,23 @@ public class MicrobitBLEManager : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
+
+            string[] args = System.Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i] == "-enableMicrobit" && i + 1 < args.Length)
+                {
+                    if (bool.TryParse(args[i + 1], out bool parsedEnable))
+                    {
+                        enableMicrobit = parsedEnable;
+                        if (!enableMicrobit)
+                        {
+                            statusMessage = "機能無効化 (-enableMicrobit false)";
+                        }
+                        Debug.Log($"[MicrobitBLE] コマンドライン引数 '-enableMicrobit {parsedEnable}' により、連携機能を{(enableMicrobit ? "有効化" : "無効化")}しました。");
+                    }
+                }
+            }
         }
         else
         {
@@ -65,6 +85,8 @@ public class MicrobitBLEManager : MonoBehaviour
 
     private void Start()
     {
+        if (!enableMicrobit) return;
+
 #if ENABLE_WINMD_SUPPORT
         // スキャンを開始
         StartScanning();
@@ -75,6 +97,20 @@ public class MicrobitBLEManager : MonoBehaviour
     }
 
     private void Update()
+    {
+        if (!enableMicrobit) return;
+
+        ProcessQueues();
+
+#if UNITY_EDITOR
+        ProcessDebugInput();
+#endif
+    }
+
+    /// <summary>
+    /// メインスレッドで実行する必要があるキューの処理を行います。
+    /// </summary>
+    private void ProcessQueues()
     {
         // メインスレッドで受信データイベントをディスパッチ
         while (dataQueue.TryDequeue(out string data))
@@ -89,26 +125,32 @@ public class MicrobitBLEManager : MonoBehaviour
             statusMessage = status;
             Debug.Log($"[MicrobitBLE] {status}");
         }
+    }
 
 #if UNITY_EDITOR
-        // デバイスがない状態でのテスト用デバッグ入力
-        if (Input.GetKeyDown(KeyCode.Alpha1))
-        {
-            dataQueue.Enqueue("L");
-            mainThreadActionQueue.Enqueue("デバッグ: 'L' (左) を受信");
-        }
-        if (Input.GetKeyDown(KeyCode.Alpha2))
-        {
-            dataQueue.Enqueue("R");
-            mainThreadActionQueue.Enqueue("デバッグ: 'R' (右) を受信");
-        }
-        if (Input.GetKeyDown(KeyCode.Alpha3))
-        {
-            dataQueue.Enqueue("S");
-            mainThreadActionQueue.Enqueue("デバッグ: 'S' (停止) を受信");
-        }
-#endif
+    /// <summary>
+    /// デバイスがない状態でのテスト用デバッグ入力を処理します。
+    /// </summary>
+    private void ProcessDebugInput()
+    {
+        var keyboard = UnityEngine.InputSystem.Keyboard.current;
+        if (keyboard == null) return;
+
+        if (keyboard.digit1Key.wasPressedThisFrame) EnqueueDebugCommand("L", "左");
+        else if (keyboard.digit2Key.wasPressedThisFrame) EnqueueDebugCommand("R", "右");
+        else if (keyboard.digit3Key.wasPressedThisFrame) EnqueueDebugCommand("S", "停止");
+        else if (keyboard.digit4Key.wasPressedThisFrame) EnqueueDebugCommand("C:RED", "赤色変更");
+        else if (keyboard.digit5Key.wasPressedThisFrame) EnqueueDebugCommand("C:BLUE", "青色変更");
+        else if (keyboard.digit6Key.wasPressedThisFrame) EnqueueDebugCommand("C:GREEN", "緑色変更");
+        else if (keyboard.digit7Key.wasPressedThisFrame) EnqueueDebugCommand("C:255,128,0", "RGB直接指定");
     }
+
+    private void EnqueueDebugCommand(string command, string description)
+    {
+        dataQueue.Enqueue(command);
+        mainThreadActionQueue.Enqueue($"デバッグ: '{command}' ({description}) を受信");
+    }
+#endif
 
     /// <summary>
     /// 対応する Bluetooth LE デバイスのスキャンを開始します。
