@@ -18,6 +18,13 @@ public class MicrobitAvatarController : NetworkBehaviour
     [Tooltip("色を変更する対象のRenderer（ExerciseBall）。未指定の場合は子オブジェクトから自動検索します。")]
     private Renderer targetBallRenderer;
 
+    // ボールの色を同期するためのNetworkVariable
+    private NetworkVariable<Color> ballColor = new NetworkVariable<Color>(
+        Color.white,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Owner
+    );
+
     private void Start()
     {
         rotator = GetComponent<KeyboardRotator>();
@@ -61,6 +68,37 @@ public class MicrobitAvatarController : NetworkBehaviour
         }
     }
 
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        ballColor.OnValueChanged += OnBallColorChanged;
+        
+        if (targetBallRenderer == null)
+        {
+            FindTargetRenderer();
+        }
+        ApplyColorToRenderer(ballColor.Value);
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        ballColor.OnValueChanged -= OnBallColorChanged;
+        base.OnNetworkDespawn();
+    }
+
+    private void OnBallColorChanged(Color previousValue, Color newValue)
+    {
+        ApplyColorToRenderer(newValue);
+    }
+
+    private void ApplyColorToRenderer(Color color)
+    {
+        if (targetBallRenderer != null && targetBallRenderer.material != null)
+        {
+            targetBallRenderer.material.color = color;
+        }
+    }
+
     public override void OnDestroy()
     {
         if (MicrobitBLEManager.Instance != null)
@@ -76,6 +114,8 @@ public class MicrobitAvatarController : NetworkBehaviour
     /// </summary>
     private void HandleDataReceived(string data)
     {
+        if (!IsOwner) return;
+
         data = data.Trim().ToUpper();
         
         if (data.StartsWith("C:"))
@@ -98,14 +138,10 @@ public class MicrobitAvatarController : NetworkBehaviour
         
         if (TryParseMicrobitColor(colorData, out Color newColor))
         {
-            if (targetBallRenderer != null && targetBallRenderer.material != null)
+            if (IsOwner)
             {
-                targetBallRenderer.material.color = newColor;
-                Debug.Log($"[MicrobitController] ExerciseBall の色を {newColor} に変更しました");
-            }
-            else
-            {
-                Debug.LogWarning("[MicrobitController] 対象のRendererが設定されていないため色を変更できません");
+                ballColor.Value = newColor;
+                Debug.Log($"[MicrobitController] ExerciseBall の色を {newColor} に変更するようネットワークに送信しました");
             }
         }
     }
