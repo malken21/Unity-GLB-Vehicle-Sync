@@ -25,9 +25,11 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Hue: 0
+    - _Glossiness: 0.5
+    - _Hue: 1
+    - _Metallic: 0
     - _Saturation: 1
-    - _Value: 1
+    - _Value: 0.6
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1
