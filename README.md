@@ -17,14 +17,14 @@
 
 ## 要件
 
-- **Unity**: 6000.2.15f1
+- **Unity**: 6000.3.9f1
 - **アセットサーバー**: ファイルのアップロードと提供を処理するための互換性のあるHTTPサーバーが必要です。
   - デフォルトURL: `http://localhost:3000`
   - *[Simple-Rust-Asset-Server](https://github.com/malken21/Simple-Rust-Asset-Server) と互換性があります*
 
 ## 始め方
 
-1. Unity 6000.2.15f1 でプロジェクトを開きます。
+1. Unity 6000.3.9f1 でプロジェクトを開きます。
 2. `Assets/Scenes/Client.unity`（またはメインシーン）を開きます。
 3. アセットサーバーが `http://localhost:3000` で実行されていることを確認します。
 4. Play Mode（再生モード）に入ります。
