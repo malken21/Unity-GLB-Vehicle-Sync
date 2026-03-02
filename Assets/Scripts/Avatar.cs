@@ -79,7 +79,26 @@ public class Avatar : NetworkBehaviour
                 }
 
                 // メインスレッドで実行します
-                var filePath = WindowsFileDialog.Open("GLB Files (*.glb)|*.glb", "Select Avatar");
+                string filePath = null;
+
+                if (!string.IsNullOrEmpty(ConnectionManager.Instance.avatarGlbPath))
+                {
+                    if (File.Exists(ConnectionManager.Instance.avatarGlbPath))
+                    {
+                        filePath = ConnectionManager.Instance.avatarGlbPath;
+                        Debug.Log($"[Avatar] Loading GLB from command line argument: {filePath}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[Avatar] GLB file not found at path specified by command line: {ConnectionManager.Instance.avatarGlbPath}");
+                    }
+                }
+
+                if (string.IsNullOrEmpty(filePath))
+                {
+                    filePath = WindowsFileDialog.Open("GLB Files (*.glb)|*.glb", "Select Avatar");
+                }
+
                 if (!string.IsNullOrEmpty(filePath))
                 {
                     StartCoroutine(UploadAndLoad(filePath));

@@ -46,6 +46,7 @@
 | `-serverIp` | IPアドレス | **Clientモード用**。接続先ゲームサーバーのIPアドレス。 |
 | `-summonAvatar` | `true` または `false` | `true`: アバター読み込み有効 (デフォルト)。`false`: アバター無効化＆上空視点モード (観戦者モード)。 |
 | `-enableMicrobit` | `true` または `false` | `true`: Micro:bit連携有効 (デフォルト)。`false`: Micro:bit連携無効化。 |
+| `-avatarGlb` | ファイルパス | 起動時に読み込むアバターのGLBファイルパス。 |
 
 ### 使用例
 
@@ -58,7 +59,7 @@
 **クライアントとして起動 (PowerShell):**
 
 ```powershell
-./Unity-GLB-Vehicle-Sync.exe -mode CLIENT -port 7777 -serverIp "192.168.1.10"
+./Unity-GLB-Vehicle-Sync.exe -mode CLIENT -port 7777 -serverIp "192.168.1.10" -avatarGlb "C:\pathto\avatar.glb"
 ```
 
 ## ビルド

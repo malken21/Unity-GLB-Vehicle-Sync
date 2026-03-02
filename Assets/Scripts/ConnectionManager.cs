@@ -13,6 +13,7 @@ public class ConnectionManager : NetworkBehaviour
     [SerializeField] private string initialServerUrl = "http://localhost:3000";
     public bool autoStartClientInEditor = true;
     public bool summonAvatar = true;
+    public string avatarGlbPath = null;
 
     private NetworkVariable<FixedString512Bytes> _serverUrl = new NetworkVariable<FixedString512Bytes>();
 
@@ -106,6 +107,7 @@ public class ConnectionManager : NetworkBehaviour
         string cliAssetUrl = null;
         string cliServerIp = null;
         string cliSummonAvatar = null;
+        string cliAvatarGlb = null;
 
         // 引数の解析
         for (int i = 0; i < args.Length; i++)
@@ -130,12 +132,22 @@ public class ConnectionManager : NetworkBehaviour
             {
                 cliSummonAvatar = args[i + 1];
             }
+            else if (args[i] == "-avatarGlb" && i + 1 < args.Length)
+            {
+                cliAvatarGlb = args[i + 1];
+            }
         }
         
         if (!string.IsNullOrEmpty(cliSummonAvatar) && bool.TryParse(cliSummonAvatar, out bool parsedSummonAvatar))
         {
             summonAvatar = parsedSummonAvatar;
             Debug.Log($"[Boot] Summon Avatar set to: {summonAvatar}");
+        }
+
+        if (!string.IsNullOrEmpty(cliAvatarGlb))
+        {
+            avatarGlbPath = cliAvatarGlb;
+            Debug.Log($"[Boot] Avatar GLB Path set to: {avatarGlbPath}");
         }
 
         if (!string.IsNullOrEmpty(cliAssetUrl))
