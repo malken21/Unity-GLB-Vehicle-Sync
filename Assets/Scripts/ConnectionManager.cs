@@ -99,80 +99,40 @@ public class ConnectionManager : NetworkBehaviour
 
     void Start()
     {
-        // コマンドライン引数を取得
-        string[] args = System.Environment.GetCommandLineArgs();
-        
-        string cliMode = null;
-        string cliPort = null;
-        string cliAssetUrl = null;
-        string cliServerIp = null;
-        string cliSummonAvatar = null;
-        string cliAvatarGlb = null;
-
-        // 引数の解析
-        for (int i = 0; i < args.Length; i++)
+        // CommandLineParserのインスタンスが確実に存在するように生成（アタッチ忘れ対策）
+        if (CommandLineParser.Instance == null)
         {
-            if (args[i] == "-mode" && i + 1 < args.Length)
-            {
-                cliMode = args[i + 1];
-            }
-            else if (args[i] == "-port" && i + 1 < args.Length)
-            {
-                cliPort = args[i + 1];
-            }
-            else if (args[i] == "-assetUrl" && i + 1 < args.Length)
-            {
-                cliAssetUrl = args[i + 1];
-            }
-            else if (args[i] == "-serverIp" && i + 1 < args.Length)
-            {
-                cliServerIp = args[i + 1];
-            }
-            else if (args[i] == "-summonAvatar" && i + 1 < args.Length)
-            {
-                cliSummonAvatar = args[i + 1];
-            }
-            else if (args[i] == "-avatarGlb" && i + 1 < args.Length)
-            {
-                cliAvatarGlb = args[i + 1];
-            }
-        }
-        
-        if (!string.IsNullOrEmpty(cliSummonAvatar) && bool.TryParse(cliSummonAvatar, out bool parsedSummonAvatar))
-        {
-            summonAvatar = parsedSummonAvatar;
-            Debug.Log($"[Boot] Summon Avatar set to: {summonAvatar}");
+            var go = new GameObject("CommandLineParser");
+            go.AddComponent<CommandLineParser>();
         }
 
-        if (!string.IsNullOrEmpty(cliAvatarGlb))
+        var cmd = CommandLineParser.Instance;
+        
+        summonAvatar = cmd.SummonAvatar;
+        Debug.Log($"[Boot] Summon Avatar set to: {summonAvatar}");
+
+        if (!string.IsNullOrEmpty(cmd.AvatarGlbPath))
         {
-            avatarGlbPath = cliAvatarGlb;
+            avatarGlbPath = cmd.AvatarGlbPath;
             Debug.Log($"[Boot] Avatar GLB Path set to: {avatarGlbPath}");
         }
 
-        if (!string.IsNullOrEmpty(cliAssetUrl))
+        if (!string.IsNullOrEmpty(cmd.AssetUrl))
         {
-            Debug.Log($"[Boot] Asset Server URL set to: {cliAssetUrl}");
-            initialServerUrl = cliAssetUrl;
+            Debug.Log($"[Boot] Asset Server URL set to: {cmd.AssetUrl}");
+            initialServerUrl = cmd.AssetUrl;
         }
 
-        if (!string.IsNullOrEmpty(cliMode))
+        if (!string.IsNullOrEmpty(cmd.Mode))
         {
-            Debug.Log($"[Boot] Command Line Config Detected: Mode={cliMode}");
+            Debug.Log($"[Boot] Command Line Config Detected: Mode={cmd.Mode}");
             var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
             
-            // ポート設定の読み込み
-            ushort port = 7777; // デフォルト
-            if (!string.IsNullOrEmpty(cliPort) && ushort.TryParse(cliPort, out ushort parsedPort))
-            {
-                port = parsedPort;
-            }
+            ushort port = cmd.Port;
 
-            if (cliMode.ToUpper() == "HOST")
+            if (cmd.Mode == "HOST")
             {
                 // HOST モード
-                // cliAssetUrl logic moved above
-
                 // UnityTransportの設定
                 transport.SetConnectionData("0.0.0.0", port);
                 
@@ -180,14 +140,10 @@ public class ConnectionManager : NetworkBehaviour
                 NetworkManager.Singleton.StartHost();
                 return;
             }
-            else if (cliMode.ToUpper() == "CLIENT")
+            else if (cmd.Mode == "CLIENT")
             {
                 // CLIENT モード
-                string targetIp = "127.0.0.1"; // デフォルト
-                if (!string.IsNullOrEmpty(cliServerIp))
-                {
-                    targetIp = cliServerIp;
-                }
+                string targetIp = cmd.ServerIp;
 
                 transport.SetConnectionData(targetIp, port);
 

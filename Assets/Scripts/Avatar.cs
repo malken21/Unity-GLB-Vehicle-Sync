@@ -11,7 +11,6 @@ using Unity.Collections;
 
 public class Avatar : NetworkBehaviour
 {
-
     // ネットワーク上で同期されるアバターのURLを保存します
     private readonly NetworkVariable<FixedString512Bytes> avatarUrlNetwork = new NetworkVariable<FixedString512Bytes>();
     private readonly NetworkVariable<float> modelScaleNetwork = new NetworkVariable<float>(1.0f);
@@ -24,6 +23,10 @@ public class Avatar : NetworkBehaviour
     public static bool s_hideOtherPlayers = false;
 
     private Vector3 initialPosition;
+    
+    // 外部からのアクセス用プロパティ
+    public float CurrentScale => modelScaleNetwork.Value;
+    public float CurrentRotationY => modelRotationYNetwork.Value;
 
     public override void OnNetworkSpawn()
     {
@@ -47,50 +50,25 @@ public class Avatar : NetworkBehaviour
 
         if (IsOwner)
         {
-            if (ConnectionManager.Instance.summonAvatar)
+            // 動的にInputHandlerとCameraControllerを追加
+            if (GetComponent<AvatarInputHandler>() == null) gameObject.AddComponent<AvatarInputHandler>();
+            if (GetComponent<AvatarCameraController>() == null) gameObject.AddComponent<AvatarCameraController>();
+
+            if (CommandLineParser.Instance.SummonAvatar)
             {
-                // カメラ追跡ロジック
-                if (Camera.main != null)
-                {
-                    var cameraTransform = Camera.main.transform;
-                    
-                    // 安定したカメラ追跡のために "Horiz" 子オブジェクトを検索または作成します
-                    var horizTransform = transform.Find("Horiz");
-                    if (horizTransform == null)
-                    {
-                        var horizGO = new GameObject("Horiz");
-                        horizTransform = horizGO.transform;
-                        horizTransform.SetParent(transform, false);
-                        horizGO.AddComponent<KeepHoriz>();
-                        Debug.Log("[Avatar] Created 'Horiz' child with KeepHoriz script.");
-                    }
-
-                    cameraTransform.SetParent(horizTransform);
-                    // アバターの後ろ、かつ少し上の位置に調整します
-                    // 以前の設定では横からの視点になるとの報告があり、モデルがX軸を向いていることを示唆しています。
-                    // X軸前方にあるモデルの背面を見るため、カメラを-Xに移動します。
-                    cameraTransform.localPosition = new Vector3(8f, 3f, 0f); 
-                    cameraTransform.localRotation = Quaternion.Euler(0f, -90f, 0f);
-                    Debug.Log($"[Avatar] Main Camera attached to {horizTransform.name} with X-axis alignment.");
-                }
-                else
-                {
-                     Debug.LogWarning("[Avatar] Main Camera not found!");
-                }
-
                 // メインスレッドで実行します
                 string filePath = null;
 
-                if (!string.IsNullOrEmpty(ConnectionManager.Instance.avatarGlbPath))
+                if (!string.IsNullOrEmpty(CommandLineParser.Instance.AvatarGlbPath))
                 {
-                    if (File.Exists(ConnectionManager.Instance.avatarGlbPath))
+                    if (File.Exists(CommandLineParser.Instance.AvatarGlbPath))
                     {
-                        filePath = ConnectionManager.Instance.avatarGlbPath;
+                        filePath = CommandLineParser.Instance.AvatarGlbPath;
                         Debug.Log($"[Avatar] Loading GLB from command line argument: {filePath}");
                     }
                     else
                     {
-                        Debug.LogWarning($"[Avatar] GLB file not found at path specified by command line: {ConnectionManager.Instance.avatarGlbPath}");
+                        Debug.LogWarning($"[Avatar] GLB file not found at path specified by command line: {CommandLineParser.Instance.AvatarGlbPath}");
                     }
                 }
 
@@ -107,52 +85,30 @@ public class Avatar : NetworkBehaviour
                 {
                     // フォールバックまたは何もしない
                     Debug.Log("No file selected, loading default.");
-                    // デフォルトの場合、他の人に見えるようにするには同期する必要がありますが、
-                    // 通常、デフォルトはプレースホルダーです。必要に応じてデフォルトの同期を試みます。
-                    // 取りあえず、何も選択されていない場合はデフォルトのURLを同期します。
-                    // 実は、以前のロジックのままRPC経由にします
-                    SetAvatarUrlServerRpc(ConnectionManager.Instance.serverUrl + "/default"); // サーバーが処理するか空であると仮定し、現時点では簡略化しています
+                    SetAvatarUrlServerRpc(ConnectionManager.Instance.serverUrl + "/default");
                 }
             }
             else
             {
                 // 俯瞰（オーバーヘッド）ビューモード
-                Debug.Log("[Avatar] Summoning disabled via command line argument. Entering Overhead View Mode.");
-
-                // サーバーに不可視状態を通知します
+                Debug.Log("[Avatar] Summoning disabled. Informing server of invisibility.");
                 SetVisibilityServerRpc(false);
-
-                if (Camera.main != null)
-                {
-                    // カメラのみ操作し、レンダラーなどはNetworkVariableの変更で処理されます
-                    var cameraTransform = Camera.main.transform;
-                    // cameraTransform.SetParent(null);
-                    // cameraTransform.position = new Vector3(0f, 50f, 0f);
-                    // cameraTransform.rotation = Quaternion.Euler(90f, 0f, 0f);
-                }
-
-                var rotator = GetComponent<KeyboardRotator>();
-                if (rotator != null)
-                {
-                    rotator.enabled = false;
-                }
             }
         }
-        else
+        
+        // 観戦者や他プレイヤー操作を無効にする
+        if (!IsOwner || !CommandLineParser.Instance.SummonAvatar)
         {
-            // 他のプレイヤーを操作できないように、所有者以外からの入力操作を無効にします
-            var rotator = GetComponent<KeyboardRotator>();
-            if (rotator != null)
-            {
-                rotator.enabled = false;
-            }
+             var rotator = GetComponent<KeyboardRotator>();
+             if (rotator != null) rotator.enabled = false;
         }
 
         // 所有者の場合に Microbit コントローラーを初期化
         if (IsOwner)
         {
             // シーン内に BLE マネージャーが存在することを確認
-            if (MicrobitBLEManager.Instance == null)
+            // (通常は別のオブジェクトとして存在しているはずだが、必須の場合生成)
+            if (MicrobitBLEManager.Instance == null && CommandLineParser.Instance.EnableMicrobit)
             {
                 var mgrGo = new GameObject("MicrobitBLEManager");
                 mgrGo.AddComponent<MicrobitBLEManager>();
@@ -161,7 +117,7 @@ public class Avatar : NetworkBehaviour
 
             // コントローラーがアタッチされていない場合は追加
             var microbitController = GetComponent<MicrobitAvatarController>();
-            if (microbitController == null)
+            if (microbitController == null && CommandLineParser.Instance.EnableMicrobit)
             {
                 microbitController = gameObject.AddComponent<MicrobitAvatarController>();
                 Debug.Log("[Avatar] MicrobitAvatarController を追加しました。");
@@ -195,14 +151,19 @@ public class Avatar : NetworkBehaviour
             targetVisibility = false;
         }
 
-        foreach (var r in GetComponentsInChildren<Renderer>(true)) // include inactive incase they were disabled
+        // 【修正】Rendererのenabledをいじるのではなく、モデルコンテナ自体のSetActiveを使うと
+        // GLBの内部的な非表示設定を壊さずに済みます。
+        if (modelContainer != null)
         {
-            r.enabled = targetVisibility;
+             modelContainer.SetActive(targetVisibility);
         }
-        foreach (var c in GetComponentsInChildren<Collider>(true))
+
+        // Colliderは自身のものを切り替えます
+        foreach (var c in GetComponents<Collider>())
         {
             c.enabled = targetVisibility;
         }
+        
         Debug.Log($"[Avatar] Visibility updated to: {targetVisibility}");
     }
 
@@ -213,6 +174,15 @@ public class Avatar : NetworkBehaviour
             modelContainer.transform.localScale = Vector3.one * modelScaleNetwork.Value;
             modelContainer.transform.localRotation = Quaternion.Euler(0, modelRotationYNetwork.Value, 0);
         }
+    }
+    
+    // 外部のInputHandler等から呼ばれるメソッド
+    public void RequestTransformUpdate(float scale, float rotationY)
+    {
+         if (IsOwner)
+         {
+              UpdateModelTransformServerRpc(scale, rotationY);
+         }
     }
 
     [ServerRpc]
@@ -238,8 +208,6 @@ public class Avatar : NetworkBehaviour
     {
         byte[] fileData = File.ReadAllBytes(filePath);
         WWWForm form = new WWWForm();
-        // 日本語ファイル名によるエラー回避と、サーバー上でのファイル名衝突を防ぐため、
-        // GUIDを使用して一意かつ安全なファイル名を生成します。
         string extension = Path.GetExtension(filePath);
         string safeFileName = System.Guid.NewGuid().ToString() + extension;
         form.AddBinaryData("file", fileData, safeFileName, "model/gltf-binary");
@@ -255,38 +223,25 @@ public class Avatar : NetworkBehaviour
             else
             {
                 string responseText = www.downloadHandler.text;
-                Debug.Log($"Upload successful. Response: {responseText}");
+                Debug.Log($"Upload successful.");
 
                 string loadUrl = "";
                 try 
                 {
-                    // JSONとして解析を試みます
                     var responseJson = JsonUtility.FromJson<UploadResponse>(responseText);
                     if (responseJson != null && !string.IsNullOrEmpty(responseJson.url))
                     {
                         loadUrl = responseJson.url;
                     }
                 }
-                catch (Exception)
-                {
-                    // JSONでない場合、または解析に失敗した場合は生のテキストにフォールバックします
-                }
+                catch (Exception) { /* json parse error fallback */ }
 
-                if (string.IsNullOrEmpty(loadUrl))
-                {
-                     loadUrl = responseText.Trim();
-                }
-
-                if (!loadUrl.StartsWith("http"))
-                {
-                     loadUrl = $"{ConnectionManager.Instance.serverUrl}/{loadUrl}"; 
-                }
+                if (string.IsNullOrEmpty(loadUrl)) loadUrl = responseText.Trim();
+                if (!loadUrl.StartsWith("http")) loadUrl = $"{ConnectionManager.Instance.serverUrl}/{loadUrl}"; 
                 
-                // クライアントがアクセスできるように localhost を実際のIPに置換します
+                // localhost の置換ロジック
                 if (loadUrl.Contains("localhost") || loadUrl.Contains("127.0.0.1"))
                 {
-                    // serverUrl から IP を取得するか、ConnectionManager の解決済みIPを使用
-                    // 単純に serverUrl (IP解決済み想定) のホスト部分で置換する
                     string currentServerUrl = ConnectionManager.Instance.serverUrl;
                     if (!currentServerUrl.Contains("localhost") && !currentServerUrl.Contains("127.0.0.1"))
                     {
@@ -294,16 +249,10 @@ public class Avatar : NetworkBehaviour
                         {
                             Uri serverUri = new Uri(currentServerUrl);
                             Uri loadUri = new Uri(loadUrl);
-                            
-                            // ポート番号も維持しつつホスト名を置換
-                            string newUrl = loadUrl.Replace(loadUri.Host, serverUri.Host);
-                            loadUrl = newUrl;
-                             Debug.Log($"[Avatar] Replaced localhost with {serverUri.Host} -> {loadUrl}");
+                            loadUrl = loadUrl.Replace(loadUri.Host, serverUri.Host);
+                            Debug.Log($"[Avatar] Replaced localhost with {serverUri.Host} -> {loadUrl}");
                         }
-                        catch(Exception e)
-                        {
-                             Debug.LogError($"[Avatar] Failed to replace localhost in URL: {e.Message}");
-                        }
+                        catch(Exception e) { Debug.LogError($"[Avatar] Failed to replace localhost: {e.Message}"); }
                     }
                 }
 
@@ -334,46 +283,28 @@ public class Avatar : NetworkBehaviour
         }
 
         currentLoader = new GltfImport();
-        
         var success = await currentLoader.Load(url);
 
         if (success)
         {
-            // 以前のコンテナをクリーンアップします
-            if (modelContainer != null)
-            {
-                Destroy(modelContainer);
-            }
+            if (modelContainer != null) Destroy(modelContainer);
             
-            // モデル用の新しいコンテナを作成します
             modelContainer = new GameObject("ModelContainer");
 
-            // 設定に基づいて親を設定します
-            if (customModelParent != null)
-            {
-                modelContainer.transform.SetParent(customModelParent, false);
-            }
-            else
-            {
-                modelContainer.transform.SetParent(transform, false);
-            }
+            if (customModelParent != null) modelContainer.transform.SetParent(customModelParent, false);
+            else modelContainer.transform.SetParent(transform, false);
             
-            // ジオメトリ用のサブコンテナを作成します（ピボット調整用）
             GameObject geometryContainer = new GameObject("GeometryContainer");
             geometryContainer.transform.SetParent(modelContainer.transform, false);
 
-            // サブコンテナ内にインスタンス化します
             await currentLoader.InstantiateMainSceneAsync(geometryContainer.transform);
             
-            // 不足しているマテリアルにシェーダーのフォールバックを適用します
             ApplyShaderFallback(geometryContainer);
 
             // メッシュの底面がコンテナの原点（ピボット）に来るように位置を調整します
-            // 調整は geometryContainer に対して行い、modelContainer は原点のままにします
             Bounds bounds = new Bounds(geometryContainer.transform.position, Vector3.zero);
             bool hasBounds = false;
             
-            // コンテナ内のレンダラーから境界（Bounds）を計算します
             foreach (var renderer in geometryContainer.GetComponentsInChildren<Renderer>())
             {
                 if (!hasBounds)
@@ -390,20 +321,13 @@ public class Avatar : NetworkBehaviour
             if (hasBounds)
             {
                 float currentMinY = bounds.min.y;
-                // modelContainerの位置（原点）を基準にします
                 float targetY = modelContainer.transform.position.y;
                 float shiftY = targetY - currentMinY;
-
-                // 高さを調整するためにジオメトリコンテナを移動します
                 geometryContainer.transform.position += new Vector3(0, shiftY, 0);
             }
 
-            // 初期のネットワーク変換を適用します（modelContainerに対して適用されます）
             UpdateModelTransform();
-
-            // 読み込み完了後に現在の可視性設定を適用します
             UpdateLocalVisibility();
-
             Debug.Log($"アバターを正常に読み込みました: {url}");
         }
         else
@@ -414,18 +338,7 @@ public class Avatar : NetworkBehaviour
 
     private void ApplyShaderFallback(GameObject container)
     {
-        Shader fallbackShader = urpLitShader;
-        
-        if (fallbackShader == null)
-        {
-            fallbackShader = Shader.Find("Universal Render Pipeline/Lit");
-        }
-
-        if (fallbackShader == null)
-        {
-            Debug.LogWarning("[Avatar] フォールバックシェーダー 'Universal Render Pipeline/Lit' が見つかりませんでした。最終手段としてデフォルトの 'Standard' を使用します。");
-            fallbackShader = Shader.Find("Standard");
-        }
+        Shader fallbackShader = urpLitShader ?? Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
 
         if (fallbackShader == null)
         {
@@ -443,44 +356,32 @@ public class Avatar : NetworkBehaviour
             {
                 if (materials[i] == null || materials[i].shader == null || materials[i].shader.name == "Hidden/InternalErrorShader" || materials[i].shader.name == "")
                 {
-                    Debug.Log($"[Avatar] フォールバックシェーダーを適用中: {renderer.name} 実行インデックス {i}");
-                    
-                    // テクスチャと色情報の保持を試みる
                     Texture mainTexture = null;
                     Color baseColor = Color.white;
 
                     Material oldMat = materials[i];
                     if (oldMat != null)
                     {
-                        // 一般的なテクスチャ名を確認 (HasPropertyはErrorShaderの場合falseを返すため、直接取得を試みる)
                         if (mainTexture == null) mainTexture = oldMat.GetTexture("baseColorTexture");
                         if (mainTexture == null) mainTexture = oldMat.GetTexture("_BaseMap");
                         if (mainTexture == null) mainTexture = oldMat.GetTexture("_MainTex");
                         if (mainTexture == null) mainTexture = oldMat.GetTexture("_BaseColorMap");
 
-                        // 一般的な色名を確認
                         if (oldMat.HasProperty("_BaseColor")) baseColor = oldMat.GetColor("_BaseColor");
                         else if (oldMat.HasProperty("_Color")) baseColor = oldMat.GetColor("_Color");
                         else if (oldMat.HasProperty("baseColorFactor")) baseColor = oldMat.GetColor("baseColorFactor");
-                        
-                        // どうしても見つからない場合のログ
-                        if (mainTexture == null)
-                        {
-                             Debug.LogWarning($"[Avatar] テクスチャが見つかりませんでした: {renderer.name}");
-                        }
                     }
 
                     Material newMat = new Material(fallbackShader);
                     
-                    // 新しいシェーダータイプに応じて保持したプロパティを適用
-                    if (fallbackShader.name.Contains("Universal Render Pipeline/Lit") || fallbackShader.name.Contains("URP"))
+                    if (fallbackShader.name.Contains("URP") || fallbackShader.name.Contains("Universal Render Pipeline"))
                     {
                         if (mainTexture != null) newMat.SetTexture("_BaseMap", mainTexture);
-                        if (mainTexture != null) newMat.SetTexture("_MainTex", mainTexture); // 一部のURPシェーダーは_MainTexも使用する
+                        if (mainTexture != null) newMat.SetTexture("_MainTex", mainTexture);
                         newMat.SetColor("_BaseColor", baseColor);
-                        newMat.SetColor("_Color", baseColor); // フォールバック
+                        newMat.SetColor("_Color", baseColor);
                     }
-                    else // Standard またはその他
+                    else
                     {
                         if (mainTexture != null) newMat.SetTexture("_MainTex", mainTexture);
                         newMat.SetColor("_Color", baseColor);
@@ -491,10 +392,7 @@ public class Avatar : NetworkBehaviour
                 }
             }
 
-            if (modified)
-            {
-                renderer.sharedMaterials = materials;
-            }
+            if (modified) renderer.sharedMaterials = materials;
         }
     }
 
@@ -502,63 +400,10 @@ public class Avatar : NetworkBehaviour
     {
         if (IsOwner)
         {
-            if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.hKey.wasPressedThisFrame)
-            {
-                s_hideOtherPlayers = !s_hideOtherPlayers;
-                Debug.Log($"[Avatar] Toggle other players visibility: {!s_hideOtherPlayers}");
-                foreach (var avatar in FindObjectsOfType<Avatar>())
-                {
-                    avatar.UpdateLocalVisibility();
-                }
-            }
-
-            // 矢印キーでのスケール（上/下）と回転（左/右）の操作
-            HandleManualAdjustments();
-
             if (transform.position.y <= -100f)
             {
                 Respawn();
             }
-        }
-    }
-
-
-    private void HandleManualAdjustments()
-    {
-        if (UnityEngine.InputSystem.Keyboard.current == null) return;
-
-        bool changed = false;
-        float currentScale = modelScaleNetwork.Value;
-        float currentRotationY = modelRotationYNetwork.Value;
-
-        // スケール：上矢印（拡大+0.1）、下矢印（縮小-0.1）
-        if (UnityEngine.InputSystem.Keyboard.current.upArrowKey.wasPressedThisFrame)
-        {
-            currentScale += 0.1f;
-            changed = true;
-        }
-        if (UnityEngine.InputSystem.Keyboard.current.downArrowKey.wasPressedThisFrame)
-        {
-            currentScale -= 0.1f;
-            if (currentScale < 0.1f) currentScale = 0.1f;
-            changed = true;
-        }
-
-        // 回転：左矢印（反時計回り22.5度）、右矢印（時計回り22.5度）
-        if (UnityEngine.InputSystem.Keyboard.current.leftArrowKey.wasPressedThisFrame)
-        {
-            currentRotationY -= 22.5f;
-            changed = true;
-        }
-        if (UnityEngine.InputSystem.Keyboard.current.rightArrowKey.wasPressedThisFrame)
-        {
-            currentRotationY += 22.5f;
-            changed = true;
-        }
-
-        if (changed)
-        {
-            UpdateModelTransformServerRpc(currentScale, currentRotationY);
         }
     }
 
@@ -575,7 +420,6 @@ public class Avatar : NetworkBehaviour
 
     public override void OnDestroy()
     {
-        // オブジェクト破棄時にローダーも適切に破棄します
         if (currentLoader != null)
         {
             currentLoader.Dispose();

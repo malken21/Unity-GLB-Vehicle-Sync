@@ -60,21 +60,14 @@ public class MicrobitBLEManager : MonoBehaviour
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            string[] args = System.Environment.GetCommandLineArgs();
-            for (int i = 0; i < args.Length; i++)
+            if (CommandLineParser.Instance != null)
             {
-                if (args[i] == "-enableMicrobit" && i + 1 < args.Length)
+                enableMicrobit = CommandLineParser.Instance.EnableMicrobit;
+                if (!enableMicrobit)
                 {
-                    if (bool.TryParse(args[i + 1], out bool parsedEnable))
-                    {
-                        enableMicrobit = parsedEnable;
-                        if (!enableMicrobit)
-                        {
-                            statusMessage = "機能無効化 (-enableMicrobit false)";
-                        }
-                        Debug.Log($"[MicrobitBLE] コマンドライン引数 '-enableMicrobit {parsedEnable}' により、連携機能を{(enableMicrobit ? "有効化" : "無効化")}しました。");
-                    }
+                    statusMessage = "機能無効化 (-enableMicrobit false)";
                 }
+                Debug.Log($"[MicrobitBLE] CommandLineParser により連携機能を{(enableMicrobit ? "有効化" : "無効化")}しました。");
             }
         }
         else
