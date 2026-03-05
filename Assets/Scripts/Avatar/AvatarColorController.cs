@@ -19,8 +19,9 @@ public class AvatarColorController : NetworkBehaviour
     );
 
     // シェーダープロパティのID
+    private static readonly int BaseColorPropertyId = Shader.PropertyToID("_BaseColor");
+    private static readonly int ColorPropertyId = Shader.PropertyToID("_Color");
     private static readonly int HuePropertyId = Shader.PropertyToID("_Hue");
-
     /// <summary>
     /// 対象となる ExerciseBall の Renderer を検索します。
     /// </summary>
@@ -68,8 +69,24 @@ public class AvatarColorController : NetworkBehaviour
     {
         if (targetBallRenderer != null)
         {
-            // カスタムシェーダーの _Hue プロパティを更新
-            targetBallRenderer.material.SetFloat(HuePropertyId, hue);
+            Color newColor = Color.HSVToRGB(hue, 1f, 1f);
+
+            // URP Litなどの _BaseColor を更新
+            if (targetBallRenderer.material.HasProperty(BaseColorPropertyId))
+            {
+                targetBallRenderer.material.SetColor(BaseColorPropertyId, newColor);
+            }
+            // Built-in Standardなどの _Color を更新
+            else if (targetBallRenderer.material.HasProperty(ColorPropertyId))
+            {
+                targetBallRenderer.material.SetColor(ColorPropertyId, newColor);
+            }
+            
+            // カスタムシェーダー用の _Hue プロパティも念のため更新
+            if (targetBallRenderer.material.HasProperty(HuePropertyId))
+            {
+                targetBallRenderer.material.SetFloat(HuePropertyId, hue);
+            }
         }
     }
 
