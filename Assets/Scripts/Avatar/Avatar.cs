@@ -101,8 +101,8 @@ public class Avatar : NetworkBehaviour
         // 観戦者や他プレイヤー操作を無効にする
         if (!IsOwner || !CommandLineParser.Instance.SummonAvatar)
         {
-             var rotator = GetComponent<KeyboardRotator>();
-             if (rotator != null) rotator.enabled = false;
+             var movement = GetComponent<AvatarMovementController>();
+             if (movement != null) movement.enabled = false;
         }
 
         // 所有者の場合に Microbit コントローラーを初期化
@@ -117,13 +117,16 @@ public class Avatar : NetworkBehaviour
                 Debug.Log("[Avatar] MicrobitBLEManager シングルトンを作成しました。");
             }
 
-            // コントローラーがアタッチされていない場合は追加
-            var microbitController = GetComponent<MicrobitAvatarController>();
-            if (microbitController == null && CommandLineParser.Instance.EnableMicrobit)
+            // ムーブメントコントローラー（マイクロビット/キーボード統合）がアタッチされていない場合は追加
+            var movementController = GetComponent<AvatarMovementController>();
+            if (movementController == null)
             {
-                microbitController = gameObject.AddComponent<MicrobitAvatarController>();
-                Debug.Log("[Avatar] MicrobitAvatarController を追加しました。");
+                movementController = gameObject.AddComponent<AvatarMovementController>();
+                Debug.Log("[Avatar] AvatarMovementController (Microbit/Keyboard) を追加しました。");
             }
+            
+            // マイクロビット設定が無効な場合は、マイクロビットからの受信を停止（オプション）
+            // ここでは単にコントローラーを追加するだけに留める（キーボード操作のため）
         }
     }
 

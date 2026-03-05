@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.Text;
 using UnityEngine;
 
-#if ENABLE_WINMD_SUPPORT
+#if ENABLE_WINMD_SUPPORT || UNITY_EDITOR_WIN
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Devices.Enumeration;
@@ -18,7 +18,7 @@ public class MicrobitBLEManager : MonoBehaviour
 {
     public static MicrobitBLEManager Instance { get; private set; }
 
-#if ENABLE_WINMD_SUPPORT
+#if ENABLE_WINMD_SUPPORT || UNITY_EDITOR_WIN
     [Header("設定")]
     [SerializeField] private string targetDeviceNameStart = "BBC micro:bit";
     // Nordic UART サービスの UUID
@@ -48,7 +48,7 @@ public class MicrobitBLEManager : MonoBehaviour
     private ConcurrentQueue<string> mainThreadActionQueue = new ConcurrentQueue<string>();
     private ConcurrentQueue<string> dataQueue = new ConcurrentQueue<string>();
 
-#if ENABLE_WINMD_SUPPORT
+#if ENABLE_WINMD_SUPPORT || UNITY_EDITOR_WIN
     private BluetoothLEDevice bluetoothDevice;
     private GattCharacteristic txCharacteristic;
 #endif
@@ -80,7 +80,7 @@ public class MicrobitBLEManager : MonoBehaviour
     {
         if (!enableMicrobit) return;
 
-#if ENABLE_WINMD_SUPPORT
+#if ENABLE_WINMD_SUPPORT || UNITY_EDITOR_WIN
         // スキャンを開始
         StartScanning();
 #else
@@ -129,13 +129,23 @@ public class MicrobitBLEManager : MonoBehaviour
         var keyboard = UnityEngine.InputSystem.Keyboard.current;
         if (keyboard == null) return;
 
-        if (keyboard.f1Key.wasPressedThisFrame) EnqueueDebugCommand("L", "左");
-        else if (keyboard.f2Key.wasPressedThisFrame) EnqueueDebugCommand("R", "右");
-        else if (keyboard.f3Key.wasPressedThisFrame) EnqueueDebugCommand("S", "停止");
+        if (keyboard.f1Key.wasPressedThisFrame) EnqueueDebugCommand("1,0,0,0", "ボタンA");
+        else if (keyboard.f2Key.wasPressedThisFrame) EnqueueDebugCommand("0,1,0,0", "ボタンB");
+        else if (keyboard.f3Key.wasPressedThisFrame) EnqueueDebugCommand("0,0,1,0", "ジャンプ");
         else if (keyboard.f4Key.wasPressedThisFrame) EnqueueDebugCommand("C:RED", "赤色変更");
         else if (keyboard.f5Key.wasPressedThisFrame) EnqueueDebugCommand("C:BLUE", "青色変更");
         else if (keyboard.f6Key.wasPressedThisFrame) EnqueueDebugCommand("C:GREEN", "緑色変更");
-        else if (keyboard.f7Key.wasPressedThisFrame) EnqueueDebugCommand("C:255,128,0", "RGB直接指定");
+        else if (keyboard.f7Key.wasPressedThisFrame) EnqueueDebugCommand("0,0,0,0", "停止状態へ");
+    }
+
+    /// <summary>
+    /// 外部（デバッグウィンドウ等）から擬似的な受信データを注入します。
+    /// </summary>
+    /// <param name="data">注入するデータ文字列 (例: "0,0,1,0")</param>
+    public void InjectDebugData(string data)
+    {
+        dataQueue.Enqueue(data);
+        mainThreadActionQueue.Enqueue($"外部デバッグ注入: '{data}'");
     }
 
     private void EnqueueDebugCommand(string command, string description)
@@ -146,11 +156,32 @@ public class MicrobitBLEManager : MonoBehaviour
 #endif
 
     /// <summary>
+    /// スキャンを停止し、再度新規に開始します。
+    /// </summary>
+    public void RestartScanning()
+    {
+#if ENABLE_WINMD_SUPPORT || UNITY_EDITOR_WIN
+        mainThreadActionQueue.Enqueue("スキャンを再試行します...");
+        // 既存の接続をクリーンアップ
+        if (bluetoothDevice != null)
+        {
+            bluetoothDevice.Dispose();
+            bluetoothDevice = null;
+        }
+        isConnected = false;
+        StartScanning();
+#else
+        Debug.LogWarning("[MicrobitBLE] エディタ実行時や非Windows環境では、実際のBLEスキャンは利用できません。");
+        mainThreadActionQueue.Enqueue("実機スキャン不可（エディタ環境等）");
+#endif
+    }
+
+    /// <summary>
     /// 対応する Bluetooth LE デバイスのスキャンを開始します。
     /// </summary>
     public void StartScanning()
     {
-#if ENABLE_WINMD_SUPPORT
+#if ENABLE_WINMD_SUPPORT || UNITY_EDITOR_WIN
         statusMessage = "micro:bit を検索中...";
         string[] requestedProperties = { "System.Devices.Aep.DeviceAddress", "System.Devices.Aep.IsConnected" };
 
@@ -178,7 +209,7 @@ public class MicrobitBLEManager : MonoBehaviour
 #endif
     }
 
-#if ENABLE_WINMD_SUPPORT
+#if ENABLE_WINMD_SUPPORT || UNITY_EDITOR_WIN
     /// <summary>
     /// ID を使用して特定の Bluetooth デバイスに接続し、UART サービスをセットアップします。
     /// </summary>
@@ -280,7 +311,7 @@ public class MicrobitBLEManager : MonoBehaviour
 
     private void OnDestroy()
     {
-#if ENABLE_WINMD_SUPPORT
+#if ENABLE_WINMD_SUPPORT || UNITY_EDITOR_WIN
         if (bluetoothDevice != null)
         {
             // リソースの解放

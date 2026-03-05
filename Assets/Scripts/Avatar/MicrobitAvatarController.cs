@@ -1,23 +1,20 @@
 using UnityEngine;
 using Unity.Netcode;
+using UnityEngine.InputSystem;
 
 /// <summary>
-/// MicrobitBLEManager からのデータを受け取り、アバターの回転を制御するクラス。
-/// KeyboardRotator のロジックを再利用または複製して動作します。
+/// micro:bit と PCキーボードの両方からの入力を受け取り、アバターの移動（ジャンプ・回転）を制御するクラス。
 /// </summary>
-[RequireComponent(typeof(KeyboardRotator))]
-public class MicrobitAvatarController : NetworkBehaviour
+public class AvatarMovementController : NetworkBehaviour
 {
-    private KeyboardRotator rotator;
-    
     // パース用バッファ
     private string receiveBuffer = "";
 
-    // 最新の入力データ
-    private int inputA = 0;
-    private int inputB = 0;
-    private int inputJ = 0;
-    private float inputR = 0f;
+    // 最新のマイクロビット入力データ
+    private int mbitInputA = 0;
+    private int mbitInputB = 0;
+    private int mbitInputJ = 0;
+    private float mbitInputR = 0f;
 
     // ジャンプトリガー
     private bool triggerJump = false;
@@ -44,10 +41,6 @@ public class MicrobitAvatarController : NetworkBehaviour
         base.OnNetworkDespawn();
     }
 
-    /// <summary>
-    /// BLE から受信した文字列を処理します。
-    /// 複数パケットに分割された場合を考慮してバッファリングし、改行で分割します。
-    /// </summary>
     private void HandleDataReceived(string data)
     {
         if (!IsOwner) return;
@@ -62,76 +55,82 @@ public class MicrobitAvatarController : NetworkBehaviour
 
             if (!string.IsNullOrEmpty(line))
             {
-                ProcessCommand(line);
+                ProcessMicrobitCommand(line);
             }
         }
     }
 
-    // 古いデバッグコマンドやC:によるカラー変更も無視せず捌くか、単純にカンマ区切りかで判定
-    private void ProcessCommand(string command)
+    private void ProcessMicrobitCommand(string command)
     {
-        if (command.StartsWith("C:")) return; // 色変更コマンドはここでは無視またはAvatarColorMicrobitInputで処理させる
+        if (command.StartsWith("C:")) return;
 
         string[] parts = command.Split(',');
         if (parts.Length == 4)
         {
-            int.TryParse(parts[0], out inputA);
-            int.TryParse(parts[1], out inputB);
-            int.TryParse(parts[2], out inputJ);
-            float.TryParse(parts[3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out inputR);
+            int.TryParse(parts[0], out mbitInputA);
+            int.TryParse(parts[1], out mbitInputB);
+            int.TryParse(parts[2], out mbitInputJ);
+            float.TryParse(parts[3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out mbitInputR);
 
-            // Jが1のときにジャンプトリガーをオン
-            if (inputJ == 1)
+            // マイクロビットでのジャンプ検知
+            if (mbitInputJ == 1)
             {
                 triggerJump = true;
             }
         }
-        else
+    }
+
+    private void Update()
+    {
+        if (!IsOwner) return;
+
+        // キーボードでのジャンプ検知 (Spaceキー)
+        if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
         {
-            // 旧フォーマット (L, R, S)
-            if (command == "L") inputR = -45f;
-            else if (command == "R") inputR = 45f;
-            else if (command == "S") inputR = 0f;
+            triggerJump = true;
         }
     }
 
     private void FixedUpdate()
     {
-        // ネットワーク上の所有者（Owner）でない場合は処理しない
         if (!IsOwner) return;
         
-        // Rigidbody の取得
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb == null) return;
 
-        // r(-180から180) のロール値を元に、左右の回転を適用
-        // 傾き(r)が一定以上のときに回転させるか、傾きに比例した速度で回転させる
-        // 例: -20以下なら左、20以上なら右回転とする
-        float rotate = 0f;
-        if (inputR < -15f)
+        // --- 回転処理の統合 ---
+        float rotateDir = 0f;
+
+        // 1. キーボード入力の取得
+        if (Keyboard.current != null)
         {
-            rotate = -1f; // 左回転
-        }
-        else if (inputR > 15f)
-        {
-            rotate = 1f;  // 右回転
+            if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) rotateDir += 1f;
+            if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) rotateDir -= 1f;
         }
 
-        // AボタンやBボタンでの旋回もサポートする場合
-        if (inputA == 1) rotate = -1f;
-        if (inputB == 1) rotate = 1f;
+        // 2. マイクロビット入力の統合
+        // A/Bボタン
+        if (mbitInputA == 1) rotateDir -= 1f;
+        if (mbitInputB == 1) rotateDir += 1f;
+        
+        // 傾き(R)による回転 (デッドゾーン設定)
+        if (mbitInputR < -15f) rotateDir -= 1f;
+        else if (mbitInputR > 15f) rotateDir += 1f;
 
-        if (rotate != 0f)
+        // 回転の適用
+        if (rotateDir != 0f)
         {
-            transform.Rotate(Vector3.up, rotate * rotationSpeed * Time.fixedDeltaTime);
+            float clampedRotate = Mathf.Clamp(rotateDir, -1f, 1f);
+            transform.Rotate(Vector3.up, clampedRotate * rotationSpeed * Time.fixedDeltaTime);
         }
 
-        // ジャンプ処理
+        // --- ジャンプ処理 ---
         if (triggerJump)
         {
             if (IsGrounded())
             {
                 rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+                Debug.Log("[AvatarMovementController] Jump triggered");
             }
             triggerJump = false;
         }
@@ -139,8 +138,6 @@ public class MicrobitAvatarController : NetworkBehaviour
 
     private bool IsGrounded()
     {
-        // 簡易的な接地判定（Avatarの原点から下方向へRayを飛ばす）
-        // Radiusが1のSphereColliderを想定し、少し余裕を持たせた距離で判定
         return Physics.Raycast(transform.position, Vector3.down, groundCheckDistance);
     }
 }
