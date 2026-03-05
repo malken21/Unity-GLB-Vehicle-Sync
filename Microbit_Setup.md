@@ -12,56 +12,44 @@ micro:bitでアバターを操作するには、加速度センサやボタン�
 5. ギアアイコンから **プロジェクトの設定** を開きます。
 6. **ペアリングなしでも接続可能 (No Pairing Required)** にチェックを入れます。これは、複雑なペアリングなしでWindows/Unityから簡単に接続するために不可欠です。
 
-## 2. ブロックコードの例
+## 2. データ送信仕様とJavaScriptコード
 
-ツールボックスから以下のロジックを作成します：
+micro:bitから送信するUART通信のデータフォーマットは以下の形式とする。
+`A(0 or 1),B(0 or 1),J(0 or 1),r(-180から180)`
 
-**最初だけ (On Start):**
+「ジャンプ動き」が発生した場合にJを1として送信する。
 
-* `Bluetooth UART サービスを開始する` (UARTサービスを開始)
-* `アイコンを表示 (ハート)` (動作中であることを示す)
-
-**ずっと (Forever):**
-
-* `もし ボタンAが押されている なら`:
-  * `Bluetooth UART 文字列を送信する "L"` (左回転)
-* `または もし ボタンBが押されている なら`:
-  * `Bluetooth UART 文字列を送信する "R"` (右回転)
-* `そうでなければ`:
-  * `Bluetooth UART 文字列を送信する "S"` (停止)
-* `一時停止 (ミリ秒) 100` (データの過剰送信を防ぐため)
-
-*加速度センサを使用する場合の代替例:*
-
-* `もし 加速度 (ロール) < -20 なら`:
-  * `Bluetooth UART 文字列を送信する "L"`
-* `または もし 加速度 (ロール) > 20 なら`:
-  * `Bluetooth UART 文字列を送信する "R"`
-* `そうでなければ`:
-  * `Bluetooth UART 文字列を送信する "S"`
-
-## 3. JavaScript コードの例
-
-**JavaScript** タブに切り替えて、以下のコードを貼り付けることもできます：
+**JavaScript** タブに切り替えて、以下のコードを貼り付ける：
 
 ```javascript
 bluetooth.startUartService()
 basic.showIcon(IconNames.Heart)
 
+let jump = 0
+
+// ジャンプ動きでジャンプ
+input.onGesture(Gesture.Shake, function () {
+    jump = 1
+    basic.pause(100)
+    jump = 0
+})
+
 basic.forever(function () {
-    if (input.buttonIsPressed(Button.A)) {
-        bluetooth.uartWriteString("L")
-    } else if (input.buttonIsPressed(Button.B)) {
-        bluetooth.uartWriteString("R")
-    } else if (input.logoIsPressed()) {
-        // ロゴタッチで色をランダムまたは特定の色に変更する例
-        bluetooth.uartWriteString("C:RED")
-    } else {
-        bluetooth.uartWriteString("S")
-    }
+    let a = input.buttonIsPressed(Button.A) ? 1 : 0
+    let b = input.buttonIsPressed(Button.B) ? 1 : 0
+    let r = input.rotation(Rotation.Roll)
+    
+    let str = "" + a + "," + b + "," + jump + "," + r + "\n"
+    bluetooth.uartWriteString(str)
+    
     basic.pause(100)
 })
 ```
+
+## 3. 動作確認手順
+
+・Unity起動しておく。(ボールだけ)
+・micro:bitのプログラムの動作確認を行う。
 
 ## 4. 書き込み (Flashing)
 

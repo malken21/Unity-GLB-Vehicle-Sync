@@ -74,7 +74,8 @@ public class Avatar : NetworkBehaviour
 
                 if (string.IsNullOrEmpty(filePath))
                 {
-                    filePath = WindowsFileDialog.Open("GLB Files (*.glb)|*.glb", "Select Avatar");
+                    // Debug用にダイアログを出さずにデフォルトのボールを利用
+                    Debug.Log("[Avatar] No GLB path provided. Using default instead of opening file dialog for debugging.");
                 }
 
                 if (!string.IsNullOrEmpty(filePath))
@@ -84,7 +85,7 @@ public class Avatar : NetworkBehaviour
                 else
                 {
                     // フォールバックまたは何もしない
-                    Debug.Log("No file selected, loading default.");
+                    Debug.Log("[Avatar] No file selected, loading default.");
                     SetAvatarUrlServerRpc(ConnectionManager.Instance.serverUrl + "/default");
                 }
             }
