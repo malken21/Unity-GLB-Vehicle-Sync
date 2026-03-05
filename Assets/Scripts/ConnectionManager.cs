@@ -192,18 +192,31 @@ public class ConnectionManager : NetworkBehaviour
 #endif
         }
     }
+    private int windowedWidth = 1280;
+    private int windowedHeight = 720;
+
     private void Update()
     {
         if (Keyboard.current != null && Keyboard.current.f11Key.wasPressedThisFrame)
         {
             if (Screen.fullScreen)
             {
-                Screen.fullScreenMode = FullScreenMode.Windowed;
-                Screen.fullScreen = false;
+                Screen.SetResolution(windowedWidth, windowedHeight, FullScreenMode.Windowed);
             }
             else
             {
-                Screen.SetResolution(Screen.currentResolution.width, Screen.currentResolution.height, FullScreenMode.FullScreenWindow);
+                windowedWidth = Screen.width;
+                windowedHeight = Screen.height;
+                Resolution[] resolutions = Screen.resolutions;
+                if (resolutions.Length > 0)
+                {
+                    Resolution maxRes = resolutions[resolutions.Length - 1];
+                    Screen.SetResolution(maxRes.width, maxRes.height, FullScreenMode.FullScreenWindow);
+                }
+                else
+                {
+                    Screen.fullScreenMode = FullScreenMode.FullScreenWindow;
+                }
             }
         }
     }
