@@ -45,7 +45,8 @@ public class AvatarColorKeyboardInput : NetworkBehaviour
 
         if (keyPressedIndex != -1)
         {
-            float hue = keyPressedIndex / 9f;
+            float t = keyPressedIndex / 9f;
+            float hue = Mathf.Lerp(0.8f, 0.0f, t);
             
             colorController.SetHue(hue);
             Debug.Log($"[AvatarColorKeyboardInput] Keyboard {((keyPressedIndex + 1) % 10)} pressed. Changing Hue to {hue}");
