@@ -196,7 +196,15 @@ public class ConnectionManager : NetworkBehaviour
     {
         if (Keyboard.current != null && Keyboard.current.f11Key.wasPressedThisFrame)
         {
-            Screen.fullScreen = !Screen.fullScreen;
+            if (Screen.fullScreen)
+            {
+                Screen.fullScreenMode = FullScreenMode.Windowed;
+                Screen.fullScreen = false;
+            }
+            else
+            {
+                Screen.SetResolution(Screen.currentResolution.width, Screen.currentResolution.height, FullScreenMode.FullScreenWindow);
+            }
         }
     }
 }
