@@ -108,8 +108,15 @@ public class ConnectionManager : NetworkBehaviour
 
         var cmd = CommandLineParser.Instance;
         
-        summonAvatar = cmd.SummonAvatar;
-        Debug.Log($"[Boot] Summon Avatar set to: {summonAvatar}");
+        if (cmd.HasSummonAvatarArg)
+        {
+            summonAvatar = cmd.SummonAvatar;
+            Debug.Log($"[Boot] Summon Avatar overridden by command line: {summonAvatar}");
+        }
+        else
+        {
+            Debug.Log($"[Boot] Using Inspector Summon Avatar: {summonAvatar}");
+        }
 
         if (!string.IsNullOrEmpty(cmd.AvatarGlbPath))
         {

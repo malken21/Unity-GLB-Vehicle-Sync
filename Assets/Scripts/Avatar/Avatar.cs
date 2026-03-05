@@ -40,7 +40,8 @@ public class Avatar : NetworkBehaviour
         isVisibleNetwork.OnValueChanged += OnVisibilityChanged;
 
         // スポーン時にすでにURLが設定されている場合（例：途中参加）、それを読み込みます
-        if (!avatarUrlNetwork.Value.IsEmpty)
+        // 【修正】召喚が無効な場合は読み込みをスキップ
+        if (!avatarUrlNetwork.Value.IsEmpty && CommandLineParser.Instance.SummonAvatar)
         {
             _ = LoadAvatar(avatarUrlNetwork.Value.ToString());
         }
@@ -276,6 +277,13 @@ public class Avatar : NetworkBehaviour
     private GltfImport currentLoader;
     public async Task LoadAvatar(string url)
     {
+        // 【修正】所有者かつ召喚が無効な場合は読み込みを拒否
+        if (IsOwner && !CommandLineParser.Instance.SummonAvatar)
+        {
+            Debug.Log("[Avatar] Summoning is disabled. Aborting LoadAvatar.");
+            return;
+        }
+
         // 以前のローダーを破棄します
         if (currentLoader != null)
         {

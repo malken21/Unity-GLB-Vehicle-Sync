@@ -44,7 +44,7 @@
 | `-port` | 数値 (例: `7777`) | 使用するポート番号。 |
 | `-assetUrl` | URL文字列 | **Hostモード用**。アセットサーバーのベースURL。 |
 | `-serverIp` | IPアドレス | **Clientモード用**。接続先ゲームサーバーのIPアドレス。 |
-| `-summonAvatar` | `true` または `false` | `true`: アバター読み込み有効 (デフォルト)。`false`: アバター無効化＆上空視点モード (観戦者モード)。 |
+| `-summonAvatar` | `true` または `false` | アバター読み込みの有無を指定。明示的に指定された場合、`ConnectionManager` のインスペクター設定を上書きします。`false`: アバター無効化＆上空視点モード。 |
 | `-enableMicrobit` | `true` または `false` | `true`: Micro:bit連携有効 (デフォルト)。`false`: Micro:bit連携無効化。 |
 | `-avatarGlb` | ファイルパス | 起動時に読み込むアバターのGLBファイルパス。 |
 

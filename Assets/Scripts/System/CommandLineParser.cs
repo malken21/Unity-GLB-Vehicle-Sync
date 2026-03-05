@@ -18,6 +18,7 @@ public class CommandLineParser : MonoBehaviour
     public bool SummonAvatar { get; private set; }
     public string AvatarGlbPath { get; private set; }
     public bool EnableMicrobit { get; private set; }
+    public bool HasSummonAvatarArg { get; private set; }
 
     [Header("Default Values")]
     [SerializeField] private ushort defaultPort = 7777;
@@ -70,7 +71,10 @@ public class CommandLineParser : MonoBehaviour
                     break;
                 case "-summonAvatar":
                     if (bool.TryParse(args[i + 1], out bool parsedSummon))
+                    {
                         SummonAvatar = parsedSummon;
+                        HasSummonAvatarArg = true;
+                    }
                     break;
                 case "-avatarGlb":
                     AvatarGlbPath = args[i + 1];
