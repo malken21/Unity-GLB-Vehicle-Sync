@@ -23,6 +23,7 @@ public class MicrobitAvatarController : NetworkBehaviour
     private bool triggerJump = false;
     [SerializeField] private float jumpForce = 5f;
     [SerializeField] private float rotationSpeed = 100f;
+    [SerializeField] private float groundCheckDistance = 1.1f;
 
     public override void OnNetworkSpawn()
     {
@@ -128,8 +129,18 @@ public class MicrobitAvatarController : NetworkBehaviour
         // ジャンプ処理
         if (triggerJump)
         {
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            if (IsGrounded())
+            {
+                rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            }
             triggerJump = false;
         }
+    }
+
+    private bool IsGrounded()
+    {
+        // 簡易的な接地判定（Avatarの原点から下方向へRayを飛ばす）
+        // Radiusが1のSphereColliderを想定し、少し余裕を持たせた距離で判定
+        return Physics.Raycast(transform.position, Vector3.down, groundCheckDistance);
     }
 }
