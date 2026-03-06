@@ -12,8 +12,8 @@
   - **Dedicated Server**: バッチモードで自動的に起動します。
   - **Client/Host**: `ConnectionManager` スクリプトで設定可能です。
 - **CI/CD**: WindowsおよびWindows Serverビルド用の自動化されたGitHub Actionsワークフロー。
-- **Micro:bit コントロール**: WindowsのBluetooth機能を使用して、BBC Micro:bitでアバターを操作できます。
-  - アバターの移動（左、右、停止など）
+- **Micro:bit コントロール**: MicroBridge（専用WebSocketサーバー）を経由して、BBC Micro:bitでアバターを操作できます。
+  - アバターの移動（左、右、ジャンプなど）
   - ExerciseBall（アバターの一部）の色変更（`C:RED` などの指定や `C:255,128,0` といったRGB値による指定）
   - 詳細は [Microbit_Setup.md](Microbit_Setup.md) を参照してください。
 

@@ -1,6 +1,6 @@
 # Unity制御用 Micro:bit Bluetooth設定ガイド
 
-micro:bitでアバターを操作するには、加速度センサやボタンのデータをBluetooth UARTサービス経由で送信する専用のプログラムをmicro:bitに書き込む必要があります。
+micro:bitでアバターを操作するには、加速度センサやボタンのデータをBluetooth UARTサービス経由で送信する専用のプログラムをmicro:bitに書き込み、さらに通信を中継する専用WebSocketサーバー **MicroBridge** を実行する必要があります。
 
 ## 1. Micro:bitのプログラミング (MakeCode)
 
@@ -10,7 +10,7 @@ micro:bitでアバターを操作するには、加速度センサやボタン�
 4. `bluetooth` を検索し、**bluetooth** 拡張機能を追加します。
     * *注意: これにより無線（Radio）機能が無効になりますが、問題ありません。*
 5. ギアアイコンから **プロジェクトの設定** を開きます。
-6. **ペアリングなしでも接続可能 (No Pairing Required)** にチェックを入れます。これは、複雑なペアリングなしでWindows/Unityから簡単に接続するために不可欠です。
+6. **ペアリングなしでも接続可能 (No Pairing Required)** にチェックを入れます。これは、複雑なペアリングなしでMicroBridgeから簡単に接続するために不可欠です。
 
 ## 2. データ送信仕様とJavaScriptコード
 
@@ -46,23 +46,18 @@ basic.forever(function () {
 })
 ```
 
-## 3. 動作確認手順
-
-・Unity起動しておく。(ボールだけ)
-・micro:bitのプログラムの動作確認を行う。
-
-## 4. 書き込み (Flashing)
+## 3. 書き込み (Flashing)
 
 1. micro:bitをUSBで接続します。
 2. **ダウンロード** をクリックします。
 3. 生成された `.hex` ファイルを MICROBIT ドライブにコピーします。
 4. 転送が完了するまで待ちます。
 
-## 5. Windowsでのペアリング
+## 4. MicroBridgeの実行とUnityとの連携
 
-1. Windows PCで、**設定 > Bluetooth とデバイス** を開きます。
-2. **デバイスの追加 > Bluetooth** をクリックします。
-3. micro:bitの電源を入れます。
-4. リストに表示された **BBC micro:bit [xxxxx]** を選択します。
-5. PIN（パスコード）を求められた場合、micro:bitのLEDに表示されるパターンを確認するか、「ペアリングなしを許可」に設定していればそのまま接続されます。
-6. Windowsで接続/ペアリングが完了すると、Unityスクリプトがデバイスを検出できるようになります。
+Unityは現在、ネイティブのBluetooth接続ではなく、WebSocketを経由してmicro:bitと通信します。この中継を担うのが **MicroBridge** です。
+
+1. Windows PCで、**設定 > Bluetooth とデバイス** からmicro:bitをペアリングします（「ペアリングなし」に設定した場合は不要なこともありますが、Windows環境ではOSレベルでの認識を安定させるためペアリングを推奨します）。
+2. バックグラウンドで `microbridge` 実行可能ファイルを起動します（デフォルトでポート4000のWebSocketサーバーとして待機し、micro:bitへ自動接続します）。
+3. Unityプロジェクト（またはビルド済みアプリ）を起動します。
+4. Unity側で自動的に `ws://127.0.0.1:4000` へ接続し、micro:bitの操作を受信してアバターの動作等に反映します。
