@@ -26,6 +26,10 @@ bluetooth.startUartService()
 basic.showIcon(IconNames.Heart)
 
 let jump = 0
+let lastA = -1
+let lastB = -1
+let lastJ = -1
+let lastR = -999
 
 // ジャンプ動きでジャンプ
 input.onGesture(Gesture.Shake, function () {
@@ -39,10 +43,18 @@ basic.forever(function () {
     let b = input.buttonIsPressed(Button.B) ? 1 : 0
     let r = input.rotation(Rotation.Roll)
     
-    let str = "a:" + a + ",b:" + b + ",j:" + jump + ",r:" + r + "\n"
-    bluetooth.uartWriteString(str)
+    // 値が変化した時のみ送信
+    if (a != lastA || b != lastB || jump != lastJ || Math.abs(r - lastR) >= 2) {
+        let str = "a:" + a + ",b:" + b + ",j:" + jump + ",r:" + r + "\n"
+        bluetooth.uartWriteString(str)
+        
+        lastA = a
+        lastB = b
+        lastJ = jump
+        lastR = r
+    }
     
-    basic.pause(100)
+    basic.pause(50)
 })
 ```
 
