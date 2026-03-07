@@ -104,6 +104,7 @@ public class MicrobitBLEManager : MonoBehaviour
             if (!string.IsNullOrEmpty(line))
             {
                 lastReceivedData = line;
+                Debug.Log($"[MicrobitBLE] Received: {line}");
                 OnDataReceived?.Invoke(line);
             }
         }
