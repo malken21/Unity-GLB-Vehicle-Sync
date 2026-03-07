@@ -75,8 +75,12 @@ public class Avatar : NetworkBehaviour
 
                 if (string.IsNullOrEmpty(filePath))
                 {
+#if UNITY_EDITOR
+                    filePath = UnityEditor.EditorUtility.OpenFilePanel("Select GLB Avatar", "", "glb");
+#else
                     // Debug用にダイアログを出さずにデフォルトのボールを利用
                     Debug.Log("[Avatar] No GLB path provided. Using default instead of opening file dialog for debugging.");
+#endif
                 }
 
                 if (!string.IsNullOrEmpty(filePath))
@@ -85,9 +89,8 @@ public class Avatar : NetworkBehaviour
                 }
                 else
                 {
-                    // フォールバックまたは何もしない
-                    Debug.Log("[Avatar] No file selected, loading default.");
-                    SetAvatarUrlServerRpc(ConnectionManager.Instance.serverUrl + "/default");
+                    Debug.Log("[Avatar] No file selected. Disabling avatar visibility.");
+                    SetVisibilityServerRpc(false);
                 }
             }
             else
