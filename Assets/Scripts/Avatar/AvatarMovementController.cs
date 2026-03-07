@@ -7,9 +7,6 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class AvatarMovementController : NetworkBehaviour
 {
-    // パース用バッファ
-    private string receiveBuffer = "";
-
     // 最新のマイクロビット入力データ
     private int mbitInputA = 0;
     private int mbitInputB = 0;
@@ -45,18 +42,11 @@ public class AvatarMovementController : NetworkBehaviour
     {
         if (!IsOwner) return;
 
-        receiveBuffer += data;
-        
-        int newLineIdx;
-        while ((newLineIdx = receiveBuffer.IndexOf('\n')) >= 0)
+        // MicrobitBLEManager が既に行単位でデータを渡しているため、
+        // ここでのバッファリングおよび行分割は不要。直接処理を行う。
+        if (!string.IsNullOrEmpty(data))
         {
-            string line = receiveBuffer.Substring(0, newLineIdx).Trim();
-            receiveBuffer = receiveBuffer.Substring(newLineIdx + 1);
-
-            if (!string.IsNullOrEmpty(line))
-            {
-                ProcessMicrobitCommand(line);
-            }
+            ProcessMicrobitCommand(data.Trim());
         }
     }
 
@@ -67,15 +57,19 @@ public class AvatarMovementController : NetworkBehaviour
         string[] parts = command.Split(',');
         if (parts.Length == 4)
         {
-            int.TryParse(parts[0], out mbitInputA);
-            int.TryParse(parts[1], out mbitInputB);
-            int.TryParse(parts[2], out mbitInputJ);
-            float.TryParse(parts[3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out mbitInputR);
-
-            // マイクロビットでのジャンプ検知
-            if (mbitInputJ == 1)
+            if (int.TryParse(parts[0], out mbitInputA) &&
+                int.TryParse(parts[1], out mbitInputB) &&
+                int.TryParse(parts[2], out mbitInputJ) &&
+                float.TryParse(parts[3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out mbitInputR))
             {
-                triggerJump = true;
+                // 解析成功のログを出力
+                Debug.Log($"[AvatarMovementController] Processed command: A={mbitInputA}, B={mbitInputB}, J={mbitInputJ}, R={mbitInputR}");
+
+                // マイクロビットでのジャンプ検知
+                if (mbitInputJ == 1)
+                {
+                    triggerJump = true;
+                }
             }
         }
     }

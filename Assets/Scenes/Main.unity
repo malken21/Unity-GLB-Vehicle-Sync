@@ -591,6 +591,8 @@ MonoBehaviour:
   initialServerUrl: http://localhost:3000
   autoStartClientInEditor: 0
   summonAvatar: 1
+  avatarGlbPath: 
+  enableMicrobit: 1
 --- !u!4 &1493667448
 Transform:
   m_ObjectHideFlags: 0

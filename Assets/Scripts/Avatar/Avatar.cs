@@ -126,6 +126,11 @@ public class Avatar : NetworkBehaviour
                 movementController = gameObject.AddComponent<AvatarMovementController>();
                 Debug.Log("[Avatar] AvatarMovementController (Microbit/Keyboard) を追加しました。");
             }
+
+            // カラー制御コントローラーがアタッチされていない場合は追加
+            if (GetComponent<AvatarColorController>() == null) gameObject.AddComponent<AvatarColorController>();
+            if (GetComponent<AvatarColorKeyboardInput>() == null) gameObject.AddComponent<AvatarColorKeyboardInput>();
+            if (GetComponent<AvatarColorMicrobitInput>() == null) gameObject.AddComponent<AvatarColorMicrobitInput>();
             
             // マイクロビット設定が無効な場合は、マイクロビットからの受信を停止（オプション）
             // ここでは単にコントローラーを追加するだけに留める（キーボード操作のため）

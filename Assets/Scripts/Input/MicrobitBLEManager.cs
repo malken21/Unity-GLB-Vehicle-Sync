@@ -103,10 +103,17 @@ public class MicrobitBLEManager : MonoBehaviour
 
             if (!string.IsNullOrEmpty(line))
             {
-                lastReceivedData = line;
-                Debug.Log($"[MicrobitBLE] Received: {line}");
-                OnDataReceived?.Invoke(line);
+                ProcessLine(line);
             }
+        }
+
+        // 改行が含まれていない、または残っているデータを処理（MicroBridgeが改行なしで送る場合に備える）
+        if (receiveBuffer.Length > 0 && receiveBuffer.Contains(","))
+        {
+            // commaが含まれていれば有効なデータとみなして処理（バッファはクリアする）
+            string line = receiveBuffer.Trim();
+            receiveBuffer = "";
+            ProcessLine(line);
         }
 
         // メインスレッドでステータスメッセージを更新
@@ -121,6 +128,13 @@ public class MicrobitBLEManager : MonoBehaviour
         {
             try { action?.Invoke(); } catch (Exception ex) { Debug.LogError($"[MicrobitBLE] Action execution error: {ex.Message}"); }
         }
+    }
+
+    private void ProcessLine(string line)
+    {
+        lastReceivedData = line;
+        Debug.Log($"[MicrobitBLE] Received: {line}");
+        OnDataReceived?.Invoke(line);
     }
 
 #if UNITY_EDITOR

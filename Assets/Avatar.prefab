@@ -405,10 +405,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::KeyboardRotator
   targetRigidbody: {fileID: 4529568741319297461}
   targetTransform: {fileID: 5757329343080021427}
-  torqueStrength: 10
+  torqueStrength: 5
   rotationSpeed: 100
   wsAxis: {x: 0, y: 0, z: 1}
-  adAxis: {x: 0, y: 1, z: 0}
+  adAxis: {x: 0, y: 0, z: 0}
   dampingFactor: 5
 --- !u!114 &-4221176684486193816
 MonoBehaviour:
@@ -423,3 +423,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MicrobitAvatarController
   ShowTopMostFoldoutHeaderGroup: 1
+  jumpForce: 5
+  rotationSpeed: 100
+  groundCheckDistance: 1.1
