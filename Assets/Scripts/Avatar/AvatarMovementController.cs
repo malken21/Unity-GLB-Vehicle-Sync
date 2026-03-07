@@ -23,7 +23,9 @@ public class AvatarMovementController : NetworkBehaviour
     private bool triggerJump = false;
     [SerializeField] private float jumpForce = 5f;
     [SerializeField] private float rotationSpeed = 100f;
+    [SerializeField] private float moveTorqueStrength = 10f;
     [SerializeField] private float groundCheckDistance = 1.1f;
+    [SerializeField] private Transform horizTransform;
 
     public override void OnNetworkSpawn()
     {
@@ -32,6 +34,16 @@ public class AvatarMovementController : NetworkBehaviour
         if (MicrobitBLEManager.Instance != null)
         {
             MicrobitBLEManager.Instance.OnDataReceived += HandleDataReceived;
+        }
+
+        if (horizTransform == null)
+        {
+            horizTransform = transform.Find("Horiz");
+            if (horizTransform == null)
+            {
+                Debug.LogWarning("[AvatarMovementController] 'Horiz' child not found. Using root forward.");
+                horizTransform = transform;
+            }
         }
     }
 
@@ -133,19 +145,28 @@ public class AvatarMovementController : NetworkBehaviour
         }
 
         // 2. マイクロビット入力の統合
-        // A/Bボタン
-        if (mbitInputA == 1) rotateDir -= 1f;
-        if (mbitInputB == 1) rotateDir += 1f;
-        
         // 傾き(R)による回転 (デッドゾーン設定)
         if (mbitInputR < -15f) rotateDir -= 1f;
         else if (mbitInputR > 15f) rotateDir += 1f;
+
+        // 3. 移動入力の取得 (A/Bボタン)
+        float moveDir = 0f;
+        if (mbitInputA == 1) moveDir += 1f;
+        if (mbitInputB == 1) moveDir -= 1f;
 
         // 回転の適用
         if (rotateDir != 0f)
         {
             float clampedRotate = Mathf.Clamp(rotateDir, -1f, 1f);
             transform.Rotate(Vector3.up, clampedRotate * rotationSpeed * Time.fixedDeltaTime);
+        }
+
+        // 移動トルクの適用
+        if (moveDir != 0f)
+        {
+            Vector3 forwardDir = horizTransform != null ? horizTransform.forward : transform.forward;
+            Vector3 torque = forwardDir * moveDir * moveTorqueStrength;
+            rb.AddTorque(torque, ForceMode.Force);
         }
 
         // --- ジャンプ処理 ---
