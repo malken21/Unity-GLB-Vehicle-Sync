@@ -14,10 +14,10 @@ micro:bitでアバターを操作するには、加速度センサやボタン�
 
 ## 2. データ送信仕様とJavaScriptコード
 
-micro:bitから送信するUART通信のデータフォーマットは以下の形式とする。
-`A(0 or 1),B(0 or 1),J(0 or 1),r(-180から180)`
+micro:bitから送信するUART通信のデータフォーマットは、キー・値形式のカンマ区切りとする。
+`a:A(0 or 1),b:B(0 or 1),j:J(0 or 1),r:R(-180から180)`
 
-「ジャンプ動き」が発生した場合にJを1として送信する。
+「ジャンプ動き」が発生した場合に `j:1` として送信する。
 
 **JavaScript** タブに切り替えて、以下のコードを貼り付ける：
 
@@ -39,7 +39,7 @@ basic.forever(function () {
     let b = input.buttonIsPressed(Button.B) ? 1 : 0
     let r = input.rotation(Rotation.Roll)
     
-    let str = "" + a + "," + b + "," + jump + "," + r + "\n"
+    let str = "a:" + a + ",b:" + b + ",j:" + jump + ",r:" + r + "\n"
     bluetooth.uartWriteString(str)
     
     basic.pause(100)

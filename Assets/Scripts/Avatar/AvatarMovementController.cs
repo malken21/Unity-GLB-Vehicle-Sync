@@ -54,24 +54,39 @@ public class AvatarMovementController : NetworkBehaviour
     {
         if (command.StartsWith("C:")) return;
 
-        string[] parts = command.Split(',');
-        if (parts.Length == 4)
-        {
-            if (int.TryParse(parts[0], out mbitInputA) &&
-                int.TryParse(parts[1], out mbitInputB) &&
-                int.TryParse(parts[2], out mbitInputJ) &&
-                float.TryParse(parts[3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out mbitInputR))
-            {
-                // 解析成功のログを出力
-                Debug.Log($"[AvatarMovementController] Processed command: A={mbitInputA}, B={mbitInputB}, J={mbitInputJ}, R={mbitInputR}");
+        // --- キー・値形式の解析 (例: "r:-178,j:0" or "r:-178") ---
+        // 効率化のため、コロンを含まない場合は処理をスキップ
+        if (!command.Contains(":")) return;
 
-                // マイクロビットでのジャンプ検知
-                if (mbitInputJ == 1)
+        string[] parts = command.Split(',');
+        foreach (var part in parts)
+        {
+            string[] kv = part.Trim().Split(':');
+            if (kv.Length == 2)
+            {
+                string key = kv[0].ToLower().Trim();
+                string val = kv[1].Trim();
+
+                if (key == "r") 
                 {
-                    triggerJump = true;
+                    if (float.TryParse(val, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float r))
+                    {
+                        mbitInputR = r;
+                    }
                 }
+                else if (key == "j")
+                {
+                    if (int.TryParse(val, out int j))
+                    {
+                        mbitInputJ = j;
+                        if (mbitInputJ == 1) triggerJump = true;
+                    }
+                }
+                else if (key == "a") int.TryParse(val, out mbitInputA);
+                else if (key == "b") int.TryParse(val, out mbitInputB);
             }
         }
+        Debug.Log($"[AvatarMovementController] Processed KV: A={mbitInputA}, B={mbitInputB}, J={mbitInputJ}, R={mbitInputR}");
     }
 
     private void Update()

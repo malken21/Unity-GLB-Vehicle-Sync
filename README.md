@@ -53,13 +53,13 @@
 **ホストとして起動 (PowerShell):**
 
 ```powershell
-./Windows.exe -mode HOST -port 7777 -assetUrl "http://assets.example.com"
+./Unity-GLB-Vehicle-Sync.exe -mode HOST -port 7777 -assetUrl "http://assets.example.com"
 ```
 
 **クライアントとして起動 (PowerShell):**
 
 ```powershell
-./Windows.exe -mode CLIENT -port 7777 -serverIp "192.168.1.10" -avatarGlb "C:\pathto\avatar.glb"
+./Unity-GLB-Vehicle-Sync.exe -mode CLIENT -port 7777 -serverIp "192.168.1.10" -avatarGlb "C:\pathto\avatar.glb"
 ```
 
 ## ビルド

@@ -99,6 +99,7 @@ public class MicrobitBLEManager : MonoBehaviour
         while ((newLineIdx = receiveBuffer.IndexOf('\n')) >= 0)
         {
             string line = receiveBuffer.Substring(0, newLineIdx).Trim();
+            // 次の処理のためにバッファを更新
             receiveBuffer = receiveBuffer.Substring(newLineIdx + 1);
 
             if (!string.IsNullOrEmpty(line))
@@ -107,13 +108,23 @@ public class MicrobitBLEManager : MonoBehaviour
             }
         }
 
-        // 改行が含まれていない、または残っているデータを処理（MicroBridgeが改行なしで送る場合に備える）
-        if (receiveBuffer.Length > 0 && receiveBuffer.Contains(","))
+        // 改行が含まれていないが、カンマやコロンが含まれている場合に備えた予備処理
+        // MicroBridgeが非常に短い間隔でデータを送り、バッファが溜まった場合に、
+        // 最後に改行がないデータもカンマベースで区切って処理する
+        if (receiveBuffer.Length > 20) // ある程度の長さが溜まっていても改行がない場合
         {
-            // commaが含まれていれば有効なデータとみなして処理（バッファはクリアする）
-            string line = receiveBuffer.Trim();
-            receiveBuffer = "";
-            ProcessLine(line);
+            int lastCommaIdx = receiveBuffer.LastIndexOf(',');
+            if (lastCommaIdx > 0)
+            {
+                string completeData = receiveBuffer.Substring(0, lastCommaIdx);
+                receiveBuffer = receiveBuffer.Substring(lastCommaIdx + 1);
+                
+                string[] parts = completeData.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var p in parts)
+                {
+                    ProcessLine(p.Trim());
+                }
+            }
         }
 
         // メインスレッドでステータスメッセージを更新
@@ -146,13 +157,13 @@ public class MicrobitBLEManager : MonoBehaviour
         var keyboard = UnityEngine.InputSystem.Keyboard.current;
         if (keyboard == null) return;
 
-        if (keyboard.f1Key.wasPressedThisFrame) EnqueueDebugCommand("1,0,0,0\n", "ボタンA");
-        else if (keyboard.f2Key.wasPressedThisFrame) EnqueueDebugCommand("0,1,0,0\n", "ボタンB");
-        else if (keyboard.f3Key.wasPressedThisFrame) EnqueueDebugCommand("0,0,1,0\n", "ジャンプ");
+        if (keyboard.f1Key.wasPressedThisFrame) EnqueueDebugCommand("a:1,b:0,j:0,r:0\n", "ボタンA");
+        else if (keyboard.f2Key.wasPressedThisFrame) EnqueueDebugCommand("a:0,b:1,j:0,r:0\n", "ボタンB");
+        else if (keyboard.f3Key.wasPressedThisFrame) EnqueueDebugCommand("a:0,b:0,j:1,r:0\n", "ジャンプ");
         else if (keyboard.f4Key.wasPressedThisFrame) EnqueueDebugCommand("C:RED\n", "赤色変更");
         else if (keyboard.f5Key.wasPressedThisFrame) EnqueueDebugCommand("C:BLUE\n", "青色変更");
         else if (keyboard.f6Key.wasPressedThisFrame) EnqueueDebugCommand("C:GREEN\n", "緑色変更");
-        else if (keyboard.f7Key.wasPressedThisFrame) EnqueueDebugCommand("0,0,0,0\n", "停止状態へ");
+        else if (keyboard.f7Key.wasPressedThisFrame) EnqueueDebugCommand("a:0,b:0,j:0,r:0\n", "停止状態へ");
     }
 
     /// <summary>
