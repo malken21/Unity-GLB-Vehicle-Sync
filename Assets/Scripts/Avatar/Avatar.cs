@@ -318,7 +318,16 @@ public class Avatar : NetworkBehaviour
 
             await currentLoader.InstantiateMainSceneAsync(geometryContainer.transform);
             
+            Debug.Log($"[Avatar] InstantiateMainSceneAsync completed. GeometryContainer children: {geometryContainer.transform.childCount}");
+            
             ApplyShaderFallback(geometryContainer);
+
+            // もし小要素で見つからない場合、念の為Avatar全体でもチェック
+            if (geometryContainer.transform.childCount == 0)
+            {
+                Debug.LogWarning("[Avatar] GeometryContainer has no children! Retrying fallback on whole Avatar object.");
+                ApplyShaderFallback(this.gameObject);
+            }
 
             // メッシュの底面がコンテナの原点（ピボット）に来るように位置を調整します
             Bounds bounds = new Bounds(geometryContainer.transform.position, Vector3.zero);
@@ -358,6 +367,7 @@ public class Avatar : NetworkBehaviour
     private void ApplyShaderFallback(GameObject container)
     {
         Shader fallbackShader = urpLitShader ?? Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+        Debug.Log($"[Avatar] ApplyShaderFallback start on '{container.name}'. FallbackShader: {(fallbackShader != null ? fallbackShader.name : "null")}");
 
         if (fallbackShader == null)
         {
@@ -366,6 +376,7 @@ public class Avatar : NetworkBehaviour
         }
 
         Renderer[] renderers = container.GetComponentsInChildren<Renderer>(true);
+        Debug.Log($"[Avatar] ApplyShaderFallback found {renderers.Length} renderers under {container.name}");
         foreach (Renderer renderer in renderers)
         {
             Material[] materials = renderer.sharedMaterials;
