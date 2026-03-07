@@ -309,8 +309,15 @@ public class Avatar : NetworkBehaviour
         var materialGenerator = new CustomMaterialGenerator(fallbackShader);
         var logger = new ConsoleLogger();
 
+        // GLTFast 6.x 推奨の読み込み設定
+        var settings = new ImportSettings {
+            GenerateMipMaps = true,
+            AnisotropicFilterLevel = 3,
+            NodeNameMethod = ImportSettings.NameImportMethod.Original // 必要に応じて
+        };
+
         currentLoader = new GltfImport(null, null, materialGenerator, logger);
-        var success = await currentLoader.Load(url);
+        var success = await currentLoader.Load(url, settings);
 
         if (success)
         {
@@ -324,11 +331,19 @@ public class Avatar : NetworkBehaviour
             GameObject geometryContainer = new GameObject("GeometryContainer");
             geometryContainer.transform.SetParent(modelContainer.transform, false);
 
-            await currentLoader.InstantiateMainSceneAsync(geometryContainer.transform);
+            // インスタンス化の成否を確認 (Issue #756 関連の堅牢性向上)
+            var successInstantiate = await currentLoader.InstantiateMainSceneAsync(geometryContainer.transform);
+            if (!successInstantiate)
+            {
+                Debug.LogError($"[Avatar] GLBのインスタンス化に失敗しました: {url}");
+                return;
+            }
             
             Debug.Log($"[Avatar] InstantiateMainSceneAsync completed. GeometryContainer children: {geometryContainer.transform.childCount}");
             
-            // ApplyShaderFallback(geometryContainer); // CustomMaterialGenerator 側で処理されるため不要
+            // 【重要】Issue #756 対策: ビルド後のマテリアル消失を防ぐため、
+            // CustomMaterialGenerator 側で有効なシェーダーへのフォールバックが行われます。
+            // また、urpLitShader フィールドによってビルド時に対象シェーダーがストリッピングされるのを防いでいます。
 
             // メッシュの底面がコンテナの原点（ピボット）に来るように位置を調整します
             Bounds bounds = new Bounds(geometryContainer.transform.position, Vector3.zero);
