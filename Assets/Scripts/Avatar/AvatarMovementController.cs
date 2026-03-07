@@ -13,6 +13,12 @@ public class AvatarMovementController : NetworkBehaviour
     private int mbitInputJ = 0;
     private float mbitInputR = 0f;
 
+    // ログ出力抑制用の前回値保持
+    private int prevInputA = 0;
+    private int prevInputB = 0;
+    private int prevInputJ = 0;
+    private float prevInputR = 0f;
+
     // ジャンプトリガー
     private bool triggerJump = false;
     [SerializeField] private float jumpForce = 5f;
@@ -86,7 +92,16 @@ public class AvatarMovementController : NetworkBehaviour
                 else if (key == "b") int.TryParse(val, out mbitInputB);
             }
         }
-        Debug.Log($"[AvatarMovementController] Processed KV: A={mbitInputA}, B={mbitInputB}, J={mbitInputJ}, R={mbitInputR}");
+
+        // 値に変化があった場合のみログ出力
+        if (mbitInputA != prevInputA || mbitInputB != prevInputB || mbitInputJ != prevInputJ || !Mathf.Approximately(mbitInputR, prevInputR))
+        {
+            Debug.Log($"[AvatarMovementController] Processed KV: A={mbitInputA}, B={mbitInputB}, J={mbitInputJ}, R={mbitInputR}");
+            prevInputA = mbitInputA;
+            prevInputB = mbitInputB;
+            prevInputJ = mbitInputJ;
+            prevInputR = mbitInputR;
+        }
     }
 
     private void Update()
