@@ -20,7 +20,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.cloud.gltfast": {
-      "version": "6.15.1",
+      "version": "6.16.1",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -33,7 +33,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.cloud.ktx": {
-      "version": "3.6.2",
+      "version": "3.6.3",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -42,7 +42,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.collab-proxy": {
-      "version": "2.11.3",
+      "version": "2.11.4",
       "depth": 0,
       "source": "registry",
       "dependencies": {},
@@ -209,7 +209,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.timeline": {
-      "version": "1.8.10",
+      "version": "1.8.11",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -258,7 +258,7 @@
       "hash": "610157ad762084380380148ba8ce14e266a6da97"
     },
     "io.github.hatayama.uloopmcp": {
-      "version": "0.67.0",
+      "version": "0.69.6",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -267,8 +267,8 @@
       "url": "https://package.openupm.com"
     },
     "org.nuget.microsoft.codeanalysis.analyzers": {
-      "version": "3.11.0",
-      "depth": 1,
+      "version": "4.14.0",
+      "depth": 0,
       "source": "registry",
       "dependencies": {},
       "url": "https://package.openupm.com"
