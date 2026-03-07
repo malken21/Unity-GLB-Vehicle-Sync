@@ -373,32 +373,53 @@ public class Avatar : NetworkBehaviour
 
             for (int i = 0; i < materials.Length; i++)
             {
-                if (materials[i] == null || materials[i].shader == null || materials[i].shader.name == "Hidden/InternalErrorShader" || materials[i].shader.name == "")
+                Material mat = materials[i];
+                if (mat == null) continue;
+
+                // シェーダーが壊れている、または正常に読み込めていない場合にフォールバックを適用
+                bool isBroken = mat.shader == null || 
+                                mat.shader.name == "Hidden/InternalErrorShader" || 
+                                mat.shader.name == "" || 
+                                mat.shader.name == "unlit" || // GLTFast の未解決シェーダー名の可能性
+                                mat.shader.name.Contains("Error");
+
+                if (isBroken)
                 {
+                    Debug.Log($"[Avatar] Falling back shader for material '{mat.name}' on {renderer.gameObject.name} (Current shader: {(mat.shader != null ? mat.shader.name : "null")})");
+                    
                     Texture mainTexture = null;
                     Color baseColor = Color.white;
 
-                    Material oldMat = materials[i];
-                    if (oldMat != null)
+                    // 一般的なGLTF/URP/Standardのプロパティ名からテクスチャと色を抽出試行
+                    string[] texProperties = { "_BaseMap", "_MainTex", "baseColorTexture", "_BaseColorMap", "mainTex" };
+                    foreach (string prop in texProperties)
                     {
-                        if (mainTexture == null) mainTexture = oldMat.GetTexture("baseColorTexture");
-                        if (mainTexture == null) mainTexture = oldMat.GetTexture("_BaseMap");
-                        if (mainTexture == null) mainTexture = oldMat.GetTexture("_MainTex");
-                        if (mainTexture == null) mainTexture = oldMat.GetTexture("_BaseColorMap");
-
-                        if (oldMat.HasProperty("_BaseColor")) baseColor = oldMat.GetColor("_BaseColor");
-                        else if (oldMat.HasProperty("_Color")) baseColor = oldMat.GetColor("_Color");
-                        else if (oldMat.HasProperty("baseColorFactor")) baseColor = oldMat.GetColor("baseColorFactor");
+                        if (mat.HasProperty(prop))
+                        {
+                            mainTexture = mat.GetTexture(prop);
+                            if (mainTexture != null) 
+                            {
+                                Debug.Log($"[Avatar] Found texture '{mainTexture.name}' via property '{prop}'");
+                                break;
+                            }
+                        }
                     }
 
+                    if (mat.HasProperty("_BaseColor")) baseColor = mat.GetColor("_BaseColor");
+                    else if (mat.HasProperty("_Color")) baseColor = mat.GetColor("_Color");
+                    else if (mat.HasProperty("baseColorFactor")) baseColor = mat.GetColor("baseColorFactor");
+
                     Material newMat = new Material(fallbackShader);
+                    newMat.name = mat.name + " (Fallback)";
                     
                     if (fallbackShader.name.Contains("URP") || fallbackShader.name.Contains("Universal Render Pipeline"))
                     {
-                        if (mainTexture != null) newMat.SetTexture("_BaseMap", mainTexture);
-                        if (mainTexture != null) newMat.SetTexture("_MainTex", mainTexture);
+                        if (mainTexture != null) 
+                        {
+                            newMat.SetTexture("_BaseMap", mainTexture);
+                            newMat.SetTexture("_MainTex", mainTexture);
+                        }
                         newMat.SetColor("_BaseColor", baseColor);
-                        newMat.SetColor("_Color", baseColor);
                     }
                     else
                     {
