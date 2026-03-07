@@ -77,10 +77,6 @@ public class MicrobitBLEManager : MonoBehaviour
         if (!enableMicrobit) return;
 
         ProcessQueues();
-
-#if UNITY_EDITOR
-        ProcessDebugInput();
-#endif
     }
 
     /// <summary>
@@ -108,13 +104,13 @@ public class MicrobitBLEManager : MonoBehaviour
             }
         }
 
-        // 改行が含まれていないが、カンマやコロンが含まれている場合に備えた予備処理
-        // MicroBridgeが非常に短い間隔でデータを送り、バッファが溜まった場合に、
-        // 最後に改行がないデータもカンマベースで区切って処理する
-        if (receiveBuffer.Length > 20) // ある程度の長さが溜まっていても改行がない場合
+        // 改行が含まれていないが、カンマが含まれている場合に備えた予備処理
+        // 送信頻度が低い場合（値変化時のみなど）、バッファが溜まるのを待たずに
+        // カンマをデリミタとして処理を開始する
+        if (receiveBuffer.Length > 0)
         {
             int lastCommaIdx = receiveBuffer.LastIndexOf(',');
-            if (lastCommaIdx > 0)
+            if (lastCommaIdx >= 0)
             {
                 string completeData = receiveBuffer.Substring(0, lastCommaIdx);
                 receiveBuffer = receiveBuffer.Substring(lastCommaIdx + 1);
@@ -143,46 +139,13 @@ public class MicrobitBLEManager : MonoBehaviour
 
     private void ProcessLine(string line)
     {
+        if (lastReceivedData != line)
+        {
+            Debug.Log($"[MicrobitBLE] Received: {line}");
+        }
         lastReceivedData = line;
-        Debug.Log($"[MicrobitBLE] Received: {line}");
         OnDataReceived?.Invoke(line);
     }
-
-#if UNITY_EDITOR
-    /// <summary>
-    /// サーバーがない状態でのテスト用デバッグ入力を処理します。
-    /// </summary>
-    private void ProcessDebugInput()
-    {
-        var keyboard = UnityEngine.InputSystem.Keyboard.current;
-        if (keyboard == null) return;
-
-        if (keyboard.f1Key.wasPressedThisFrame) EnqueueDebugCommand("a:1,b:0,j:0,r:0\n", "ボタンA");
-        else if (keyboard.f2Key.wasPressedThisFrame) EnqueueDebugCommand("a:0,b:1,j:0,r:0\n", "ボタンB");
-        else if (keyboard.f3Key.wasPressedThisFrame) EnqueueDebugCommand("a:0,b:0,j:1,r:0\n", "ジャンプ");
-        else if (keyboard.f4Key.wasPressedThisFrame) EnqueueDebugCommand("C:RED\n", "赤色変更");
-        else if (keyboard.f5Key.wasPressedThisFrame) EnqueueDebugCommand("C:BLUE\n", "青色変更");
-        else if (keyboard.f6Key.wasPressedThisFrame) EnqueueDebugCommand("C:GREEN\n", "緑色変更");
-        else if (keyboard.f7Key.wasPressedThisFrame) EnqueueDebugCommand("a:0,b:0,j:0,r:0\n", "停止状態へ");
-    }
-
-    /// <summary>
-    /// 外部（デバッグウィンドウ等）から擬似的な受信データを注入します。
-    /// </summary>
-    /// <param name="data">注入するデータ文字列</param>
-    public void InjectDebugData(string data)
-    {
-        if (!data.EndsWith("\n")) data += "\n";
-        dataQueue.Enqueue(data);
-        mainThreadActionQueue.Enqueue($"外部デバッグ注入: '{data.Trim()}'");
-    }
-
-    private void EnqueueDebugCommand(string command, string description)
-    {
-        dataQueue.Enqueue(command);
-        mainThreadActionQueue.Enqueue($"デバッグ: '{command.Trim()}' ({description}) を受信");
-    }
-#endif
 
     /// <summary>
     /// 接続を再試行します。
