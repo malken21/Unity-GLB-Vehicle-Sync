@@ -3,17 +3,18 @@ using Unity.Netcode;
 
 /// <summary>
 /// アバターに追従するカメラ制御、または俯瞰カメラ制御を担当するクラス。
-/// Avatar.cs にあったカメラロジックを分離。
+/// カメラの追従処理は Main Camera 側の AvatarFollowCamera に委任し、
+/// このスクリプトはモードの切り替えとターゲット設定のみを担う。
 /// </summary>
 public class AvatarCameraController : NetworkBehaviour
 {
-    private Vector3 _overheadPosition = new Vector3(0f, 50f, 0f);
-    private Quaternion _overheadRotation = Quaternion.Euler(90f, 0f, 0f);
+    private static readonly Vector3 OverheadPosition = new Vector3(0f, 50f, 0f);
+    private static readonly Quaternion OverheadRotation = Quaternion.Euler(90f, 0f, 0f);
 
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
-        
+
         if (!IsOwner) return;
 
         bool summonAvatar = ConnectionManager.Instance != null && ConnectionManager.Instance.summonAvatar;
@@ -30,44 +31,63 @@ public class AvatarCameraController : NetworkBehaviour
 
     private void SetupFollowCamera()
     {
-        if (Camera.main != null)
-        {
-            var cameraTransform = Camera.main.transform;
-            
-            // 安定したカメラ追跡のために "Horiz" 子オブジェクトを検索または作成します
-            var horizTransform = transform.Find("Horiz");
-            if (horizTransform == null)
-            {
-                var horizGO = new GameObject("Horiz");
-                horizTransform = horizGO.transform;
-                horizTransform.SetParent(transform, false);
-                horizGO.AddComponent<KeepHoriz>();
-                Debug.Log("[AvatarCamera] Created 'Horiz' child with KeepHoriz script.");
-            }
-
-            cameraTransform.SetParent(horizTransform);
-            // アバターの後ろ、かつ少し上の位置に調整します
-            // X軸前方にあるモデルの背面を見るため、カメラを-Xに移動します。
-            cameraTransform.localPosition = new Vector3(8f, 3f, 0f); 
-            cameraTransform.localRotation = Quaternion.Euler(0f, -90f, 0f);
-            Debug.Log($"[AvatarCamera] Main Camera attached to {horizTransform.name} with default alignment.");
-        }
-        else
+        if (Camera.main == null)
         {
             Debug.LogWarning("[AvatarCamera] Main Camera not found!");
+            return;
         }
+
+        // AvatarFollowCamera を Main Camera に追加（未アタッチの場合のみ）
+        var followCam = Camera.main.GetComponent<AvatarFollowCamera>();
+        if (followCam == null)
+        {
+            followCam = Camera.main.gameObject.AddComponent<AvatarFollowCamera>();
+        }
+
+        // Horiz 子オブジェクトを探してターゲットとして渡す
+        var horizTransform = transform.Find("Horiz") ?? transform;
+        followCam.SetTarget(horizTransform);
+
+        // カメラの親子関係を解除（以前にアタッチされていた場合の保険）
+        Camera.main.transform.SetParent(null);
+
+        Debug.Log($"[AvatarCamera] AvatarFollowCamera target set to: {horizTransform.name}");
     }
 
     private void SetupOverheadCamera()
     {
         Debug.Log("[AvatarCamera] Summoning disabled. Setting up Overhead Camera.");
 
-        if (Camera.main != null)
+        if (Camera.main == null) return;
+
+        var followCam = Camera.main.GetComponent<AvatarFollowCamera>();
+        if (followCam != null)
         {
-            var cameraTransform = Camera.main.transform;
-            cameraTransform.SetParent(null);
-            cameraTransform.position = _overheadPosition;
-            cameraTransform.rotation = _overheadRotation;
+            followCam.ClearTarget();
         }
+
+        var cameraTransform = Camera.main.transform;
+        cameraTransform.SetParent(null);
+        cameraTransform.position = OverheadPosition;
+        cameraTransform.rotation = OverheadRotation;
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        if (IsOwner && Camera.main != null)
+        {
+            var followCam = Camera.main.GetComponent<AvatarFollowCamera>();
+            if (followCam != null)
+            {
+                followCam.ClearTarget();
+            }
+
+            // 念のため親子関係も解除
+            if (Camera.main.transform.IsChildOf(transform))
+            {
+                Camera.main.transform.SetParent(null);
+            }
+        }
+        base.OnNetworkDespawn();
     }
 }
