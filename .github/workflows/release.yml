@@ -59,7 +59,7 @@ jobs:
         uses: game-ci/unity-builder@v4
         with:
           buildProfile: ${{ matrix.profilePath }}
-          buildName: ${{ matrix.name }}
+          buildName: ${{ github.event.repository.name }}
 
       - name: Compress Build
         run: |
