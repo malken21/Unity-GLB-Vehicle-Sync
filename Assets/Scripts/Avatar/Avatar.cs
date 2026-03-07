@@ -313,7 +313,7 @@ public class Avatar : NetworkBehaviour
         var settings = new ImportSettings {
             GenerateMipMaps = true,
             AnisotropicFilterLevel = 3,
-            NodeNameMethod = ImportSettings.NameImportMethod.Original // 必要に応じて
+            NodeNameMethod = NameImportMethod.Original // 必要に応じて
         };
 
         currentLoader = new GltfImport(null, null, materialGenerator, logger);
