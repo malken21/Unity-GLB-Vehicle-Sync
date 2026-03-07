@@ -75,12 +75,11 @@ public class Avatar : NetworkBehaviour
 
                 if (string.IsNullOrEmpty(filePath))
                 {
-#if UNITY_EDITOR
-                    filePath = UnityEditor.EditorUtility.OpenFilePanel("Select GLB Avatar", "", "glb");
-#else
-                    // Debug用にダイアログを出さずにデフォルトのボールを利用
-                    Debug.Log("[Avatar] No GLB path provided. Using default instead of opening file dialog for debugging.");
-#endif
+                    filePath = WindowsFileDialog.Open("GLB Files (*.glb)|*.glb|All Files (*.*)|*.*", "Select GLB Avatar");
+                    if (string.IsNullOrEmpty(filePath))
+                    {
+                        Debug.Log("[Avatar] No GLB path provided. Using default instead of opening file dialog for debugging.");
+                    }
                 }
 
                 if (!string.IsNullOrEmpty(filePath))
