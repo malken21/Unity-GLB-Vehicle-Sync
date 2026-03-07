@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 using GLTFast;
+using GLTFast.Logging;
+using GLTFast.Materials;
 
 using Unity.Netcode;
 using Unity.Collections;
@@ -285,6 +287,7 @@ public class Avatar : NetworkBehaviour
     [SerializeField] private Shader urpLitShader; // ビルド時にシェーダーが含まれるように参照を保持
 
     private GltfImport currentLoader;
+    
     public async Task LoadAvatar(string url)
     {
         // 【修正】所有者かつ召喚が無効な場合は読み込みを拒否
@@ -301,7 +304,12 @@ public class Avatar : NetworkBehaviour
             currentLoader = null;
         }
 
-        currentLoader = new GltfImport();
+        // カスタムマテリアルジェネレーターとロガーを設定
+        var fallbackShader = urpLitShader ?? Shader.Find("Universal Render Pipeline/Lit");
+        var materialGenerator = new CustomMaterialGenerator(fallbackShader);
+        var logger = new ConsoleLogger();
+
+        currentLoader = new GltfImport(null, null, materialGenerator, logger);
         var success = await currentLoader.Load(url);
 
         if (success)
@@ -320,14 +328,7 @@ public class Avatar : NetworkBehaviour
             
             Debug.Log($"[Avatar] InstantiateMainSceneAsync completed. GeometryContainer children: {geometryContainer.transform.childCount}");
             
-            ApplyShaderFallback(geometryContainer);
-
-            // もし小要素で見つからない場合、念の為Avatar全体でもチェック
-            if (geometryContainer.transform.childCount == 0)
-            {
-                Debug.LogWarning("[Avatar] GeometryContainer has no children! Retrying fallback on whole Avatar object.");
-                ApplyShaderFallback(this.gameObject);
-            }
+            // ApplyShaderFallback(geometryContainer); // CustomMaterialGenerator 側で処理されるため不要
 
             // メッシュの底面がコンテナの原点（ピボット）に来るように位置を調整します
             Bounds bounds = new Bounds(geometryContainer.transform.position, Vector3.zero);
@@ -364,105 +365,6 @@ public class Avatar : NetworkBehaviour
         }
     }
 
-    private void ApplyShaderFallback(GameObject container)
-    {
-        Shader fallbackShader = urpLitShader ?? Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-        Debug.Log($"[Avatar] ApplyShaderFallback start on '{container.name}'. FallbackShader: {(fallbackShader != null ? fallbackShader.name : "null")}");
-
-        if (fallbackShader == null)
-        {
-            Debug.LogError("[Avatar] 適切なフォールバックシェーダーが見つかりませんでした。");
-            return;
-        }
-
-        Renderer[] renderers = container.GetComponentsInChildren<Renderer>(true);
-        Debug.Log($"[Avatar] ApplyShaderFallback found {renderers.Length} renderers under {container.name}");
-        foreach (Renderer renderer in renderers)
-        {
-            Material[] materials = renderer.sharedMaterials;
-            Debug.Log($"[Avatar] Renderer '{renderer.gameObject.name}' type: {renderer.GetType().Name}, materials count: {materials.Length}");
-            bool modified = false;
-
-            for (int i = 0; i < materials.Length; i++)
-            {
-                Material mat = materials[i];
-                bool isNewMaterial = false;
-
-                if (mat == null)
-                {
-                    Debug.LogWarning($"[Avatar] Material[{i}] is NULL on {renderer.gameObject.name}. Creating a new fallback material.");
-                    mat = new Material(fallbackShader);
-                    isNewMaterial = true;
-                }
-
-                string sName = mat.shader != null ? mat.shader.name : "null";
-                
-                // シェーダーが壊れている、または正常に読み込めていない場合にフォールバックを適用
-                bool isBroken = mat.shader == null || 
-                                sName == "Hidden/InternalErrorShader" || 
-                                sName == "" || 
-                                sName == "unlit" || 
-                                sName.Contains("Error") ||
-                                sName == "Standard"; 
-
-                if (isBroken || isNewMaterial)
-                {
-                    if (!isNewMaterial) Debug.Log($"[Avatar] Falling back shader for material '{mat.name}' on {renderer.gameObject.name} (Current shader: {sName})");
-                    
-                    Texture mainTexture = null;
-                    Color baseColor = Color.white;
-
-                    // 既存のマテリアルがある場合はプロパティの抽出を試みる
-                    if (!isNewMaterial)
-                    {
-                        // 一般的なGLTF/URP/Standardのプロパティ名からテクスチャと色を抽出試行
-                        string[] texProperties = { "_BaseMap", "_MainTex", "baseColorTexture", "_BaseColorMap", "mainTex" };
-                        foreach (string prop in texProperties)
-                        {
-                            if (mat.HasProperty(prop))
-                            {
-                                mainTexture = mat.GetTexture(prop);
-                                if (mainTexture != null) 
-                                {
-                                    Debug.Log($"[Avatar] Found texture '{mainTexture.name}' via property '{prop}'");
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (mat.HasProperty("_BaseColor")) baseColor = mat.GetColor("_BaseColor");
-                        else if (mat.HasProperty("_Color")) baseColor = mat.GetColor("_Color");
-                        else if (mat.HasProperty("baseColorFactor")) baseColor = mat.GetColor("baseColorFactor");
-                    }
-
-                    Material newMat = new Material(fallbackShader);
-                    newMat.name = (isNewMaterial ? "New" : mat.name) + " (Fallback)";
-                    
-                    // URPのリトシェーダー（または類似）への設定
-                    if (fallbackShader.name.Contains("URP") || fallbackShader.name.Contains("Universal Render Pipeline"))
-                    {
-                        if (mainTexture != null) 
-                        {
-                            newMat.SetTexture("_BaseMap", mainTexture);
-                            // 念の為 _MainTex にもセット（一部の古いシェーダーやツール用）
-                            if (newMat.HasProperty("_MainTex")) newMat.SetTexture("_MainTex", mainTexture);
-                        }
-                        newMat.SetColor("_BaseColor", baseColor);
-                    }
-                    else
-                    {
-                        if (mainTexture != null) newMat.SetTexture("_MainTex", mainTexture);
-                        newMat.SetColor("_Color", baseColor);
-                    }
-
-                    materials[i] = newMat;
-                    modified = true;
-                }
-            }
-
-            if (modified) renderer.sharedMaterials = materials;
-        }
-    }
 
     private void Update()
     {
