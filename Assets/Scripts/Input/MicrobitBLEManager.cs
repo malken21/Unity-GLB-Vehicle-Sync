@@ -49,14 +49,14 @@ public class MicrobitBLEManager : MonoBehaviour
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            if (CommandLineParser.Instance != null)
+            if (ConnectionManager.Instance != null)
             {
-                enableMicrobit = CommandLineParser.Instance.EnableMicrobit;
+                enableMicrobit = ConnectionManager.Instance.enableMicrobit;
                 if (!enableMicrobit)
                 {
                     statusMessage = "機能無効化 (-enableMicrobit false)";
                 }
-                Debug.Log($"[MicrobitBLE] CommandLineParser により連携機能を{(enableMicrobit ? "有効化" : "無効化")}しました。");
+                Debug.Log($"[MicrobitBLE] ConnectionManager により連携機能を{(enableMicrobit ? "有効化" : "無効化")}しました。");
             }
         }
         else

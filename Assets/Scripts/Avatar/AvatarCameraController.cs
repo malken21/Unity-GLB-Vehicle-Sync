@@ -16,17 +16,7 @@ public class AvatarCameraController : NetworkBehaviour
         
         if (!IsOwner) return;
 
-        bool summonAvatar = true;
-        
-        if (CommandLineParser.Instance != null && !CommandLineParser.Instance.SummonAvatar)
-        {
-            summonAvatar = false;
-        }
-        else if (ConnectionManager.Instance != null && !ConnectionManager.Instance.summonAvatar)
-        {
-            // CommandLineParserがない場合のフォールバック
-            summonAvatar = false;
-        }
+        bool summonAvatar = ConnectionManager.Instance != null && ConnectionManager.Instance.summonAvatar;
 
         if (summonAvatar)
         {

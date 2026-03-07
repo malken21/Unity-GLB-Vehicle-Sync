@@ -41,7 +41,7 @@ public class Avatar : NetworkBehaviour
 
         // スポーン時にすでにURLが設定されている場合（例：途中参加）、それを読み込みます
         // 【修正】召喚が無効な場合は読み込みをスキップ
-        if (!avatarUrlNetwork.Value.IsEmpty && CommandLineParser.Instance.SummonAvatar)
+        if (!avatarUrlNetwork.Value.IsEmpty && ConnectionManager.Instance.summonAvatar)
         {
             _ = LoadAvatar(avatarUrlNetwork.Value.ToString());
         }
@@ -55,21 +55,21 @@ public class Avatar : NetworkBehaviour
             if (GetComponent<AvatarInputHandler>() == null) gameObject.AddComponent<AvatarInputHandler>();
             if (GetComponent<AvatarCameraController>() == null) gameObject.AddComponent<AvatarCameraController>();
 
-            if (CommandLineParser.Instance.SummonAvatar)
+            if (ConnectionManager.Instance.summonAvatar)
             {
                 // メインスレッドで実行します
                 string filePath = null;
 
-                if (!string.IsNullOrEmpty(CommandLineParser.Instance.AvatarGlbPath))
+                if (!string.IsNullOrEmpty(ConnectionManager.Instance.avatarGlbPath))
                 {
-                    if (File.Exists(CommandLineParser.Instance.AvatarGlbPath))
+                    if (File.Exists(ConnectionManager.Instance.avatarGlbPath))
                     {
-                        filePath = CommandLineParser.Instance.AvatarGlbPath;
+                        filePath = ConnectionManager.Instance.avatarGlbPath;
                         Debug.Log($"[Avatar] Loading GLB from command line argument: {filePath}");
                     }
                     else
                     {
-                        Debug.LogWarning($"[Avatar] GLB file not found at path specified by command line: {CommandLineParser.Instance.AvatarGlbPath}");
+                        Debug.LogWarning($"[Avatar] GLB file not found at path specified by command line: {ConnectionManager.Instance.avatarGlbPath}");
                     }
                 }
 
@@ -101,7 +101,7 @@ public class Avatar : NetworkBehaviour
         }
         
         // 観戦者や他プレイヤー操作を無効にする
-        if (!IsOwner || !CommandLineParser.Instance.SummonAvatar)
+        if (!IsOwner || !ConnectionManager.Instance.summonAvatar)
         {
              var movement = GetComponent<AvatarMovementController>();
              if (movement != null) movement.enabled = false;
@@ -112,7 +112,7 @@ public class Avatar : NetworkBehaviour
         {
             // シーン内に BLE マネージャーが存在することを確認
             // (通常は別のオブジェクトとして存在しているはずだが、必須の場合生成)
-            if (MicrobitBLEManager.Instance == null && CommandLineParser.Instance.EnableMicrobit)
+            if (MicrobitBLEManager.Instance == null && ConnectionManager.Instance.enableMicrobit)
             {
                 var mgrGo = new GameObject("MicrobitBLEManager");
                 mgrGo.AddComponent<MicrobitBLEManager>();
@@ -283,7 +283,7 @@ public class Avatar : NetworkBehaviour
     public async Task LoadAvatar(string url)
     {
         // 【修正】所有者かつ召喚が無効な場合は読み込みを拒否
-        if (IsOwner && !CommandLineParser.Instance.SummonAvatar)
+        if (IsOwner && !ConnectionManager.Instance.summonAvatar)
         {
             Debug.Log("[Avatar] Summoning is disabled. Aborting LoadAvatar.");
             return;

@@ -14,6 +14,7 @@ public class ConnectionManager : NetworkBehaviour
     public bool autoStartClientInEditor = true;
     public bool summonAvatar = true;
     public string avatarGlbPath = null;
+    public bool enableMicrobit = true;
 
     private NetworkVariable<FixedString512Bytes> _serverUrl = new NetworkVariable<FixedString512Bytes>();
 
@@ -129,6 +130,10 @@ public class ConnectionManager : NetworkBehaviour
             Debug.Log($"[Boot] Asset Server URL set to: {cmd.AssetUrl}");
             initialServerUrl = cmd.AssetUrl;
         }
+
+        // enableMicrobit の同期（引数があれば優先）
+        enableMicrobit = cmd.EnableMicrobit;
+        Debug.Log($"[Boot] Microbit enabled: {enableMicrobit}");
 
         if (!string.IsNullOrEmpty(cmd.Mode))
         {
