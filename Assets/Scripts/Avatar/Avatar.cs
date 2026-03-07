@@ -377,15 +377,17 @@ public class Avatar : NetworkBehaviour
                 if (mat == null) continue;
 
                 // シェーダーが壊れている、または正常に読み込めていない場合にフォールバックを適用
+                string sName = mat.shader != null ? mat.shader.name : "";
                 bool isBroken = mat.shader == null || 
-                                mat.shader.name == "Hidden/InternalErrorShader" || 
-                                mat.shader.name == "" || 
-                                mat.shader.name == "unlit" || // GLTFast の未解決シェーダー名の可能性
-                                mat.shader.name.Contains("Error");
+                                sName == "Hidden/InternalErrorShader" || 
+                                sName == "" || 
+                                sName == "unlit" || 
+                                sName.Contains("Error") ||
+                                sName == "Standard"; // URP環境でStandardが残っている場合も警告/修正対象
 
                 if (isBroken)
                 {
-                    Debug.Log($"[Avatar] Falling back shader for material '{mat.name}' on {renderer.gameObject.name} (Current shader: {(mat.shader != null ? mat.shader.name : "null")})");
+                    Debug.Log($"[Avatar] Falling back shader for material '{mat.name}' on {renderer.gameObject.name} (Current shader: {sName})");
                     
                     Texture mainTexture = null;
                     Color baseColor = Color.white;
