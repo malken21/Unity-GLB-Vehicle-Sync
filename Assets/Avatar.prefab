@@ -419,7 +419,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 9030851858174537478}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 10d5d6bc10f1fdd4590e9082a4f28568, type: 3}
+  m_Script: {fileID: 11500000, guid: 998589f8582551b40b40dd360b209b46, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MicrobitAvatarController
   ShowTopMostFoldoutHeaderGroup: 1
