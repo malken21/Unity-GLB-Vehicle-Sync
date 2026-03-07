@@ -376,8 +376,10 @@ public class Avatar : NetworkBehaviour
                 Material mat = materials[i];
                 if (mat == null) continue;
 
+                string sName = mat.shader != null ? mat.shader.name : "null";
+                Debug.Log($"[Avatar] Checking material '{mat.name}' on {renderer.gameObject.name}. Shader: {sName}");
+
                 // シェーダーが壊れている、または正常に読み込めていない場合にフォールバックを適用
-                string sName = mat.shader != null ? mat.shader.name : "";
                 bool isBroken = mat.shader == null || 
                                 sName == "Hidden/InternalErrorShader" || 
                                 sName == "" || 
