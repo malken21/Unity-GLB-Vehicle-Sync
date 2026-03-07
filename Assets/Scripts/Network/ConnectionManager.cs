@@ -11,7 +11,7 @@ public class ConnectionManager : NetworkBehaviour
 
     [Header("Development Settings")]
     [SerializeField] private string initialServerUrl = "http://localhost:3000";
-    public bool autoStartClientInEditor = true;
+    public bool autoStartClientInEditor = false;
     public bool summonAvatar = true;
     public string avatarGlbPath = null;
     public bool enableMicrobit = true;
