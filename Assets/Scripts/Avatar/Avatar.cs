@@ -386,19 +386,17 @@ public class Avatar : NetworkBehaviour
             for (int i = 0; i < materials.Length; i++)
             {
                 Material mat = materials[i];
-                
+                bool isNewMaterial = false;
+
                 if (mat == null)
                 {
                     Debug.LogWarning($"[Avatar] Material[{i}] is NULL on {renderer.gameObject.name}. Creating a new fallback material.");
                     mat = new Material(fallbackShader);
-                    materials[i] = mat;
-                    modified = true;
-                    // 以降の texture 抽出は元の mat が無いので実質スキップ
+                    isNewMaterial = true;
                 }
 
                 string sName = mat.shader != null ? mat.shader.name : "null";
-                Debug.Log($"[Avatar] Checking material '{mat.name}' on {renderer.gameObject.name}. Shader: {sName}");
-
+                
                 // シェーダーが壊れている、または正常に読み込めていない場合にフォールバックを適用
                 bool isBroken = mat.shader == null || 
                                 sName == "Hidden/InternalErrorShader" || 
@@ -407,41 +405,47 @@ public class Avatar : NetworkBehaviour
                                 sName.Contains("Error") ||
                                 sName == "Standard"; 
 
-                if (isBroken && !modified) // 新規作成した場合はここで重複処理しない
+                if (isBroken || isNewMaterial)
                 {
-                    Debug.Log($"[Avatar] Falling back shader for material '{mat.name}' on {renderer.gameObject.name} (Current shader: {sName})");
+                    if (!isNewMaterial) Debug.Log($"[Avatar] Falling back shader for material '{mat.name}' on {renderer.gameObject.name} (Current shader: {sName})");
                     
                     Texture mainTexture = null;
                     Color baseColor = Color.white;
 
-                    // 一般的なGLTF/URP/Standardのプロパティ名からテクスチャと色を抽出試行
-                    string[] texProperties = { "_BaseMap", "_MainTex", "baseColorTexture", "_BaseColorMap", "mainTex" };
-                    foreach (string prop in texProperties)
+                    // 既存のマテリアルがある場合はプロパティの抽出を試みる
+                    if (!isNewMaterial)
                     {
-                        if (mat.HasProperty(prop))
+                        // 一般的なGLTF/URP/Standardのプロパティ名からテクスチャと色を抽出試行
+                        string[] texProperties = { "_BaseMap", "_MainTex", "baseColorTexture", "_BaseColorMap", "mainTex" };
+                        foreach (string prop in texProperties)
                         {
-                            mainTexture = mat.GetTexture(prop);
-                            if (mainTexture != null) 
+                            if (mat.HasProperty(prop))
                             {
-                                Debug.Log($"[Avatar] Found texture '{mainTexture.name}' via property '{prop}'");
-                                break;
+                                mainTexture = mat.GetTexture(prop);
+                                if (mainTexture != null) 
+                                {
+                                    Debug.Log($"[Avatar] Found texture '{mainTexture.name}' via property '{prop}'");
+                                    break;
+                                }
                             }
                         }
+
+                        if (mat.HasProperty("_BaseColor")) baseColor = mat.GetColor("_BaseColor");
+                        else if (mat.HasProperty("_Color")) baseColor = mat.GetColor("_Color");
+                        else if (mat.HasProperty("baseColorFactor")) baseColor = mat.GetColor("baseColorFactor");
                     }
 
-                    if (mat.HasProperty("_BaseColor")) baseColor = mat.GetColor("_BaseColor");
-                    else if (mat.HasProperty("_Color")) baseColor = mat.GetColor("_Color");
-                    else if (mat.HasProperty("baseColorFactor")) baseColor = mat.GetColor("baseColorFactor");
-
                     Material newMat = new Material(fallbackShader);
-                    newMat.name = mat.name + " (Fallback)";
+                    newMat.name = (isNewMaterial ? "New" : mat.name) + " (Fallback)";
                     
+                    // URPのリトシェーダー（または類似）への設定
                     if (fallbackShader.name.Contains("URP") || fallbackShader.name.Contains("Universal Render Pipeline"))
                     {
                         if (mainTexture != null) 
                         {
                             newMat.SetTexture("_BaseMap", mainTexture);
-                            newMat.SetTexture("_MainTex", mainTexture);
+                            // 念の為 _MainTex にもセット（一部の古いシェーダーやツール用）
+                            if (newMat.HasProperty("_MainTex")) newMat.SetTexture("_MainTex", mainTexture);
                         }
                         newMat.SetColor("_BaseColor", baseColor);
                     }
