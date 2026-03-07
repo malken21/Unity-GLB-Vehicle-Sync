@@ -309,8 +309,8 @@
       "url": "https://package.openupm.com"
     },
     "org.nuget.system.buffers": {
-      "version": "4.6.0",
-      "depth": 1,
+      "version": "4.6.1",
+      "depth": 0,
       "source": "registry",
       "dependencies": {},
       "url": "https://package.openupm.com"
