@@ -380,6 +380,7 @@ public class Avatar : NetworkBehaviour
         foreach (Renderer renderer in renderers)
         {
             Material[] materials = renderer.sharedMaterials;
+            Debug.Log($"[Avatar] Renderer '{renderer.gameObject.name}' type: {renderer.GetType().Name}, materials count: {materials.Length}");
             bool modified = false;
 
             for (int i = 0; i < materials.Length; i++)
