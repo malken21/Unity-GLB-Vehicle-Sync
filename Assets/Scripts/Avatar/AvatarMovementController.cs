@@ -158,7 +158,8 @@ public class AvatarMovementController : NetworkBehaviour
         if (rotateDir != 0f)
         {
             float clampedRotate = Mathf.Clamp(rotateDir, -1f, 1f);
-            transform.Rotate(Vector3.up, clampedRotate * rotationSpeed * Time.fixedDeltaTime);
+            Vector3 upAxis = horizTransform != null ? horizTransform.up : Vector3.up;
+            transform.Rotate(upAxis, clampedRotate * rotationSpeed * Time.fixedDeltaTime, Space.World);
         }
 
         // 移動トルクの適用
