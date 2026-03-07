@@ -386,7 +386,15 @@ public class Avatar : NetworkBehaviour
             for (int i = 0; i < materials.Length; i++)
             {
                 Material mat = materials[i];
-                if (mat == null) continue;
+                
+                if (mat == null)
+                {
+                    Debug.LogWarning($"[Avatar] Material[{i}] is NULL on {renderer.gameObject.name}. Creating a new fallback material.");
+                    mat = new Material(fallbackShader);
+                    materials[i] = mat;
+                    modified = true;
+                    // 以降の texture 抽出は元の mat が無いので実質スキップ
+                }
 
                 string sName = mat.shader != null ? mat.shader.name : "null";
                 Debug.Log($"[Avatar] Checking material '{mat.name}' on {renderer.gameObject.name}. Shader: {sName}");
@@ -397,9 +405,9 @@ public class Avatar : NetworkBehaviour
                                 sName == "" || 
                                 sName == "unlit" || 
                                 sName.Contains("Error") ||
-                                sName == "Standard"; // URP環境でStandardが残っている場合も警告/修正対象
+                                sName == "Standard"; 
 
-                if (isBroken)
+                if (isBroken && !modified) // 新規作成した場合はここで重複処理しない
                 {
                     Debug.Log($"[Avatar] Falling back shader for material '{mat.name}' on {renderer.gameObject.name} (Current shader: {sName})");
                     
