@@ -6,7 +6,6 @@ public class AvatarFollowCamera : MonoBehaviour
 {
     [SerializeField] private float followDistance = 8f;
     [SerializeField] private float heightOffset = 3f;
-    [SerializeField] private float smoothSpeed = 8f;
 
     private Transform _horizTarget;
     private float _searchTimer = 0f;
