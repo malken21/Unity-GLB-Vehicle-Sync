@@ -27,6 +27,11 @@ public class AvatarInputHandler : NetworkBehaviour
             }
         }
 
+        if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+        {
+            _avatar.Respawn();
+        }
+
         HandleManualAdjustments();
     }
 

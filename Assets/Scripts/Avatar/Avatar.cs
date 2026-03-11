@@ -330,10 +330,14 @@ public class Avatar : NetworkBehaviour
 
             if (hasBounds)
             {
+                // Align bottom to Y=0 and center on X/Z
+                Vector3 currentCenter = bounds.center;
                 float currentMinY = bounds.min.y;
-                float targetY = modelContainer.transform.position.y;
-                float shiftY = targetY - currentMinY;
-                geometryContainer.transform.position += new Vector3(0, shiftY, 0);
+                
+                // We want: geometry center (X, Z) to be at (0, 0)
+                // We want: geometry bottom (Y) to be at 0
+                Vector3 shift = new Vector3(-currentCenter.x, -currentMinY, -currentCenter.z);
+                geometryContainer.transform.localPosition = shift;
             }
 
             UpdateModelTransform();
@@ -358,7 +362,7 @@ public class Avatar : NetworkBehaviour
         }
     }
 
-    private void Respawn()
+    public void Respawn()
     {
         transform.position = initialPosition;
         if (TryGetComponent<Rigidbody>(out var rb))
@@ -366,7 +370,7 @@ public class Avatar : NetworkBehaviour
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
         }
-        Debug.Log("[Avatar] Respawned due to falling.");
+        Debug.Log("[Avatar] Respawned.");
     }
 
     public override void OnDestroy()
