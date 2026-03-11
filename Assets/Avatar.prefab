@@ -240,6 +240,7 @@ GameObject:
   - component: {fileID: 5270874406497533824}
   - component: {fileID: 4802109642652633975}
   - component: {fileID: -888950815913415405}
+  - component: {fileID: 3172165430789007220}
   m_Layer: 0
   m_Name: Avatar
   m_TagString: Untagged
@@ -485,4 +486,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1692139277bfbef49ae1cbf5d7f7780f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AvatarColorMicrobitInput
+  ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &3172165430789007220
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9030851858174537478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0301a05891cccaa4a94b65f047758f9f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AvatarVisibilityController
   ShowTopMostFoldoutHeaderGroup: 1
