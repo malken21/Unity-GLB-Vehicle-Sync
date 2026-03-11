@@ -83,15 +83,22 @@ public class AvatarFollowCamera : MonoBehaviour
         _horizTarget = horiz;
         if (horiz != null)
         {
-            transform.SetParent(horiz);
-            
-            // 親が設定されたらローカル座標と回転を1度だけ初期化する
-            transform.localPosition = new Vector3(0, heightOffset, -followDistance);
+            if (transform.parent != horiz)
+            {
+                transform.SetParent(horiz);
+                // 親が設定された直後のみローカル座標と回転を初期化する
+                transform.localPosition = new Vector3(0, heightOffset, -followDistance);
+                transform.localRotation = Quaternion.identity;
+            }
+            // 常にターゲットを注視するようにしておく（Start時の位置調整用）
             transform.LookAt(horiz);
         }
         else
         {
-            transform.SetParent(null);
+            if (transform.parent != null)
+            {
+                transform.SetParent(null);
+            }
         }
         Debug.Log($"[AvatarFollowCamera] Target set to: {horiz?.name ?? "null"}");
     }
