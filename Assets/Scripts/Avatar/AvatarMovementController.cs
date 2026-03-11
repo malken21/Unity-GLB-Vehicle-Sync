@@ -23,7 +23,6 @@ public class AvatarMovementController : NetworkBehaviour
     [SerializeField] private float dampingFactor = 5.0f;
 
     [SerializeField] private Transform horizTransform;
-    [SerializeField] private KeyboardRotator keyboardRotator;
 
     private float jumpBufferTimer = 0f;
     [SerializeField] private float jumpBufferTime = 0.5f;
@@ -54,11 +53,6 @@ public class AvatarMovementController : NetworkBehaviour
                 Debug.LogWarning("[AvatarMovementController] 'Horiz' child not found. Using root forward.");
                 horizTransform = transform;
             }
-        }
-
-        if (keyboardRotator == null)
-        {
-            keyboardRotator = GetComponentInChildren<KeyboardRotator>();
         }
     }
 
@@ -149,8 +143,12 @@ public class AvatarMovementController : NetworkBehaviour
     {
         if (!IsOwner) return;
 
-        // Keyboard inputs are now handled by KeyboardRotator (Space jump), 
-        // but we keep the logic for Microbit jump buffering here if it needs to interact with movement.
+        // Keyboard jump input
+        if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+        {
+            jumpBufferTimer = jumpBufferTime;
+            currentJumpStrength = 180; // Full strength for keyboard
+        }
 
         if (jumpBufferTimer > 0f)
         {
@@ -167,6 +165,14 @@ public class AvatarMovementController : NetworkBehaviour
 
         float rotateDir = 0f;
 
+        // Keyboard rotation (A/D)
+        if (Keyboard.current != null)
+        {
+            if (Keyboard.current.dKey.isPressed) rotateDir += 1f;
+            if (Keyboard.current.aKey.isPressed) rotateDir -= 1f;
+        }
+
+        // Microbit rotation (R)
         if (mbitInputR < -15f) rotateDir -= 1f;
         else if (mbitInputR > 15f) rotateDir += 1f;
 
@@ -174,6 +180,14 @@ public class AvatarMovementController : NetworkBehaviour
 
         float moveDir = 0f;
 
+        // Keyboard movement (W/S)
+        if (Keyboard.current != null)
+        {
+            if (Keyboard.current.wKey.isPressed) moveDir += 1f;
+            if (Keyboard.current.sKey.isPressed) moveDir -= 1f;
+        }
+
+        // Microbit movement (A/B)
         if (mbitInputA == 1) moveDir += 1f;
         if (mbitInputB == 1) moveDir -= 1f;
 
@@ -217,22 +231,35 @@ public class AvatarMovementController : NetworkBehaviour
 
         if (jumpBufferTimer > 0f)
         {
-            // Scale jump force between 50% and 100% of jumpForce based on strength (50-180)
-            float scale = 1.0f;
-            if (currentJumpStrength >= jumpThreshold)
+            if (IsGrounded())
             {
-                scale = Mathf.Lerp(0.5f, 1.0f, (currentJumpStrength - jumpThreshold) / (180f - jumpThreshold));
-            }
+                // Scale jump force between 50% and 100% of jumpForce based on strength (50-180)
+                float scale = 1.0f;
+                if (currentJumpStrength >= jumpThreshold)
+                {
+                    scale = Mathf.Lerp(0.5f, 1.0f, (currentJumpStrength - jumpThreshold) / (180f - jumpThreshold));
+                }
 
-            if (keyboardRotator != null)
-            {
-                keyboardRotator.Jump(scale);
-                // We assume KeyboardRotator handles grounding and actual force application
+                rb.AddForce(Vector3.up * jumpForce * scale, ForceMode.Impulse);
+                Debug.Log($"[AvatarMovementController] Jump triggered! (strength: {currentJumpStrength}, scale: {scale:F2})");
+                
                 jumpBufferTimer = 0f;
                 currentJumpStrength = 0;
             }
         }
     }
 
-    // IsGrounded logic has been moved to KeyboardRotator
+    public bool IsGrounded()
+    {
+        // アバターの中心より少し上から下に向けてレイを飛ばす
+        Vector3 origin = transform.position + Vector3.up * groundCheckOffset;
+        // 自身のレイヤーを除外
+        int layerMask = groundLayer.value & ~(1 << gameObject.layer);
+        bool grounded = Physics.Raycast(origin, Vector3.down, groundCheckDistance + groundCheckOffset, layerMask);
+        
+        // シーンビューでのデバッグ表示
+        Debug.DrawRay(origin, Vector3.down * (groundCheckDistance + groundCheckOffset), grounded ? Color.green : Color.red);
+        
+        return grounded;
+    }
 }

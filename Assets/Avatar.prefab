@@ -234,7 +234,6 @@ GameObject:
   - component: {fileID: 5307786580590753834}
   - component: {fileID: 4529568741319297461}
   - component: {fileID: 6189257738961732581}
-  - component: {fileID: 4269160822374962831}
   - component: {fileID: -4221176684486193816}
   - component: {fileID: 1046417490605377532}
   - component: {fileID: -8841174127709580046}
@@ -396,31 +395,6 @@ MonoBehaviour:
   UseRigidBodyForMotion: 0
   AutoUpdateKinematicState: 1
   AutoSetKinematicOnDespawn: 1
---- !u!114 &4269160822374962831
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9030851858174537478}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 84e62aba3c6ad64488d7e53b0abc4f33, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::KeyboardRotator
-  targetRigidbody: {fileID: 4529568741319297461}
-  targetTransform: {fileID: 5757329343080021427}
-  torqueStrength: 30
-  rotationSpeed: 30
-  wsAxis: {x: 1, y: 0, z: 0}
-  adAxis: {x: 0, y: 1, z: 0}
-  dampingFactor: 5
-  jumpForce: 5
-  groundCheckDistance: 1
-  groundCheckOffset: 0.7
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 4294967295
 --- !u!114 &-4221176684486193816
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -444,7 +418,6 @@ MonoBehaviour:
     m_Bits: 128
   dampingFactor: 5
   horizTransform: {fileID: 5757329343080021427}
-  keyboardRotator: {fileID: 4269160822374962831}
   jumpBufferTime: 0.5
   jumpThreshold: 50
 --- !u!114 &1046417490605377532
@@ -486,7 +459,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AvatarColorController
   ShowTopMostFoldoutHeaderGroup: 1
-  targetBallRenderer: {fileID: 0}
+  targetBallRenderer: {fileID: 551506456445436654}
 --- !u!114 &4802109642652633975
 MonoBehaviour:
   m_ObjectHideFlags: 0
