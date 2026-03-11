@@ -19,4 +19,9 @@ public class KeepHoriz : MonoBehaviour
         // World Upに合わせて回転を設定し、Y回転（ヨー）を維持します
         transform.rotation = Quaternion.LookRotation(forward.normalized, Vector3.up);
     }
+
+    public void AddYaw(float angleDelta)
+    {
+        transform.Rotate(Vector3.up, angleDelta, Space.World);
+    }
 }
