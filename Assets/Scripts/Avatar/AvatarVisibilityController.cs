@@ -6,11 +6,10 @@ public class AvatarVisibilityController : NetworkBehaviour
 {
     private Renderer[] renderers;
     private static bool showOtherAvatars = false;
+    private int lastRendererCount = -1;
 
     public override void OnNetworkSpawn()
     {
-        renderers = GetComponentsInChildren<Renderer>();
-
         if (!IsOwner)
         {
             SetVisibility(showOtherAvatars);
@@ -26,6 +25,14 @@ public class AvatarVisibilityController : NetworkBehaviour
             {
                 ToggleOtherAvatarsVisibility();
                 Debug.Log($"[AvatarVisibilityController] Toggle other players visibility: {showOtherAvatars}");
+            }
+        }
+        else
+        {
+            Renderer[] currentRenderers = GetComponentsInChildren<Renderer>(true);
+            if (currentRenderers.Length != lastRendererCount)
+            {
+                SetVisibility(showOtherAvatars);
             }
         }
     }
@@ -47,7 +54,8 @@ public class AvatarVisibilityController : NetworkBehaviour
 
     private void SetVisibility(bool isVisible)
     {
-        if (renderers == null) return;
+        renderers = GetComponentsInChildren<Renderer>(true);
+        lastRendererCount = renderers.Length;
 
         foreach (var r in renderers)
         {
