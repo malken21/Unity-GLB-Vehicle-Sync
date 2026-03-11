@@ -316,13 +316,18 @@ public class Avatar : NetworkBehaviour
 
             if (hasBounds)
             {
-                // Align bottom to Y=0 and center on X/Z
-                Vector3 currentCenter = bounds.center;
-                float currentMinY = bounds.min.y;
+                // Align bottom to Y=0 and center on X/Z relative to the model parent
+                // Bounds center/min/max are in world space. 
+                // We need to find where the bounds are relative to modelContainer.
+                Vector3 worldMin = bounds.min;
+                Vector3 worldCenter = bounds.center;
+
+                Vector3 localMin = modelContainer.transform.InverseTransformPoint(worldMin);
+                Vector3 localCenter = modelContainer.transform.InverseTransformPoint(worldCenter);
                 
-                // We want: geometry center (X, Z) to be at (0, 0)
-                // We want: geometry bottom (Y) to be at 0
-                Vector3 shift = new Vector3(-currentCenter.x, -currentMinY, -currentCenter.z);
+                // We want: geometry localCenter (X, Z) to be at (0, 0)
+                // We want: geometry localMin (Y) to be at 0
+                Vector3 shift = new Vector3(-localCenter.x, -localMin.y, -localCenter.z);
                 geometryContainer.transform.localPosition = shift;
             }
 
