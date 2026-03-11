@@ -25,6 +25,19 @@ public class KeyboardRotator : MonoBehaviour
     [Header("Damping Settings")]
     [Tooltip("入力をやめた際に回転を止める抵抗力。値が大きいほど早く止まります。")]
     [SerializeField] private float dampingFactor = 5.0f;
+    
+    [Header("Jump Settings")]
+    [Tooltip("ジャンプの強さ")]
+    [SerializeField] private float jumpForce = 5f;
+
+    [Tooltip("接地判定の距離")]
+    [SerializeField] private float groundCheckDistance = 1.0f;
+
+    [Tooltip("接地判定の開始オフセット(上方向)")]
+    [SerializeField] private float groundCheckOffset = 0.7f;
+
+    [Tooltip("地面とみなすレイヤー")]
+    [SerializeField] private LayerMask groundLayer = -1;
 
     private void Start()
     {
@@ -42,6 +55,18 @@ public class KeyboardRotator : MonoBehaviour
         if (targetRigidbody != null && targetRigidbody.angularDamping == 0)
         {
             targetRigidbody.angularDamping = 0.5f;
+        }
+    }
+
+    private void Update()
+    {
+        // キーボードが接続されていない場合は処理しない
+        if (Keyboard.current == null) return;
+
+        // ジャンプ入力 (New Input System / Frame-based check)
+        if (Keyboard.current.spaceKey.wasPressedThisFrame)
+        {
+            Jump();
         }
     }
 
@@ -85,5 +110,36 @@ public class KeyboardRotator : MonoBehaviour
             float rotateAmount = inputAD * rotationSpeed * Time.fixedDeltaTime;
             targetTransform.Rotate(adAxis, rotateAmount);
         }
+    }
+
+    /// <summary>
+    /// 接地している場合にジャンプを実行します。外部からも呼び出し可能です。
+    /// </summary>
+    /// <param name="strengthScale">ジャンプ強度の倍率 (0.0 - 1.0)</param>
+    public void Jump(float strengthScale = 1.0f)
+    {
+        if (targetRigidbody == null) return;
+
+        if (IsGrounded())
+        {
+            targetRigidbody.AddForce(Vector3.up * jumpForce * strengthScale, ForceMode.Impulse);
+            Debug.Log($"[KeyboardRotator] Jump triggered! (scale: {strengthScale:F2})");
+        }
+    }
+
+    private bool IsGrounded()
+    {
+        if (targetTransform == null) return false;
+
+        // アバターの中心より少し上から下に向けてレイを飛ばす
+        Vector3 origin = targetTransform.position + Vector3.up * groundCheckOffset;
+        // 自身のレイヤーを除外
+        int layerMask = groundLayer.value & ~(1 << gameObject.layer);
+        bool grounded = Physics.Raycast(origin, Vector3.down, groundCheckDistance + groundCheckOffset, layerMask);
+        
+        // シーンビューでのデバッグ表示
+        Debug.DrawRay(origin, Vector3.down * (groundCheckDistance + groundCheckOffset), grounded ? Color.green : Color.red);
+        
+        return grounded;
     }
 }
