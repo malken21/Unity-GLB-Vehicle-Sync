@@ -13,20 +13,16 @@ using Unity.Collections;
 
 public class Avatar : NetworkBehaviour
 {
-    // ネットワーク上で同期されるアバターのURLを保存します
     private readonly NetworkVariable<FixedString512Bytes> avatarUrlNetwork = new NetworkVariable<FixedString512Bytes>();
     private readonly NetworkVariable<float> modelScaleNetwork = new NetworkVariable<float>(1.0f);
     private readonly NetworkVariable<float> modelRotationYNetwork = new NetworkVariable<float>(0.0f);
     
-    // アバターの可視性を同期します
     private readonly NetworkVariable<bool> isVisibleNetwork = new NetworkVariable<bool>(true);
 
-    // 他プレイヤーを非表示にする設定（ローカルのみ）
     public static bool s_hideOtherPlayers = false;
 
     private Vector3 initialPosition;
     
-    // 外部からのアクセス用プロパティ
     public float CurrentScale => modelScaleNetwork.Value;
     public float CurrentRotationY => modelRotationYNetwork.Value;
 
@@ -41,25 +37,20 @@ public class Avatar : NetworkBehaviour
         modelRotationYNetwork.OnValueChanged += OnModelTransformChanged;
         isVisibleNetwork.OnValueChanged += OnVisibilityChanged;
 
-        // スポーン時にすでにURLが設定されている場合（例：途中参加）、それを読み込みます
-        // 【修正】召喚が無効な場合は読み込みをスキップ
         if (!avatarUrlNetwork.Value.IsEmpty && ConnectionManager.Instance.summonAvatar)
         {
             _ = LoadAvatar(avatarUrlNetwork.Value.ToString());
         }
 
-        // 初期可視性の適用
         UpdateLocalVisibility();
 
         if (IsOwner)
         {
-            // 動的にInputHandlerとCameraControllerを追加
             if (GetComponent<AvatarInputHandler>() == null) gameObject.AddComponent<AvatarInputHandler>();
             if (GetComponent<AvatarCameraController>() == null) gameObject.AddComponent<AvatarCameraController>();
 
             if (ConnectionManager.Instance.summonAvatar)
             {
-                // メインスレッドで実行します
                 string filePath = null;
 
                 if (!string.IsNullOrEmpty(ConnectionManager.Instance.avatarGlbPath))
@@ -96,46 +87,36 @@ public class Avatar : NetworkBehaviour
             }
             else
             {
-                // 俯瞰（オーバーヘッド）ビューモード
                 Debug.Log("[Avatar] Summoning disabled. Informing server of invisibility.");
                 SetVisibilityServerRpc(false);
             }
         }
         
-        // 観戦者や他プレイヤー操作を無効にする
         if (!IsOwner || !ConnectionManager.Instance.summonAvatar)
         {
              var movement = GetComponent<AvatarMovementController>();
              if (movement != null) movement.enabled = false;
         }
 
-        // 所有者の場合に Microbit コントローラーを初期化
         if (IsOwner)
         {
-            // シーン内に BLE マネージャーが存在することを確認
-            // (通常は別のオブジェクトとして存在しているはずだが、必須の場合生成)
             if (MicrobitBLEManager.Instance == null && ConnectionManager.Instance.enableMicrobit)
             {
                 var mgrGo = new GameObject("MicrobitBLEManager");
                 mgrGo.AddComponent<MicrobitBLEManager>();
-                Debug.Log("[Avatar] MicrobitBLEManager シングルトンを作成しました。");
+                Debug.Log("[Avatar] MicrobitBLEManager created.");
             }
 
-            // ムーブメントコントローラー（マイクロビット/キーボード統合）がアタッチされていない場合は追加
             var movementController = GetComponent<AvatarMovementController>();
             if (movementController == null)
             {
                 movementController = gameObject.AddComponent<AvatarMovementController>();
-                Debug.Log("[Avatar] AvatarMovementController (Microbit/Keyboard) を追加しました。");
+                Debug.Log("[Avatar] AvatarMovementController added.");
             }
 
-            // カラー制御コントローラーがアタッチされていない場合は追加
             if (GetComponent<AvatarColorController>() == null) gameObject.AddComponent<AvatarColorController>();
             if (GetComponent<AvatarColorKeyboardInput>() == null) gameObject.AddComponent<AvatarColorKeyboardInput>();
             if (GetComponent<AvatarColorMicrobitInput>() == null) gameObject.AddComponent<AvatarColorMicrobitInput>();
-            
-            // マイクロビット設定が無効な場合は、マイクロビットからの受信を停止（オプション）
-            // ここでは単にコントローラーを追加するだけに留める（キーボード操作のため）
         }
     }
 
@@ -165,14 +146,11 @@ public class Avatar : NetworkBehaviour
             targetVisibility = false;
         }
 
-        // 【修正】Rendererのenabledをいじるのではなく、モデルコンテナ自体のSetActiveを使うと
-        // GLBの内部的な非表示設定を壊さずに済みます。
         if (modelContainer != null)
         {
              modelContainer.SetActive(targetVisibility);
         }
 
-        // Colliderは自身のものを切り替えます
         foreach (var c in GetComponents<Collider>())
         {
             c.enabled = targetVisibility;
@@ -190,7 +168,6 @@ public class Avatar : NetworkBehaviour
         }
     }
     
-    // 外部のInputHandler等から呼ばれるメソッド
     public void RequestTransformUpdate(float scale, float rotationY)
     {
          if (IsOwner)
@@ -248,12 +225,11 @@ public class Avatar : NetworkBehaviour
                         loadUrl = responseJson.url;
                     }
                 }
-                catch (Exception) { /* json parse error fallback */ }
+                catch (Exception) { }
 
                 if (string.IsNullOrEmpty(loadUrl)) loadUrl = responseText.Trim();
                 if (!loadUrl.StartsWith("http")) loadUrl = $"{ConnectionManager.Instance.serverUrl}/{loadUrl}"; 
                 
-                // localhost の置換ロジック
                 if (loadUrl.Contains("localhost") || loadUrl.Contains("127.0.0.1"))
                 {
                     string currentServerUrl = ConnectionManager.Instance.serverUrl;
@@ -283,37 +259,33 @@ public class Avatar : NetworkBehaviour
 
     private GameObject modelContainer;
 
-    [SerializeField] private Transform customModelParent; // ユーザー指定の親オブジェクト
-    [SerializeField] private Shader urpLitShader; // ビルド時にシェーダーが含まれるように参照を保持
+    [SerializeField] private Transform customModelParent;
+    [SerializeField] private Shader urpLitShader;
 
     private GltfImport currentLoader;
     
     public async Task LoadAvatar(string url)
     {
-        // 【修正】所有者かつ召喚が無効な場合は読み込みを拒否
         if (IsOwner && !ConnectionManager.Instance.summonAvatar)
         {
             Debug.Log("[Avatar] Summoning is disabled. Aborting LoadAvatar.");
             return;
         }
 
-        // 以前のローダーを破棄します
         if (currentLoader != null)
         {
             currentLoader.Dispose();
             currentLoader = null;
         }
 
-        // カスタムマテリアルジェネレーターとロガーを設定
         var fallbackShader = urpLitShader ?? Shader.Find("Universal Render Pipeline/Lit");
         var materialGenerator = new CustomMaterialGenerator(fallbackShader);
         var logger = new ConsoleLogger();
 
-        // GLTFast 6.x 推奨の読み込み設定
         var settings = new ImportSettings {
             GenerateMipMaps = true,
             AnisotropicFilterLevel = 3,
-            NodeNameMethod = NameImportMethod.Original // 必要に応じて
+            NodeNameMethod = NameImportMethod.Original
         };
 
         currentLoader = new GltfImport(null, null, materialGenerator, logger);
@@ -331,21 +303,15 @@ public class Avatar : NetworkBehaviour
             GameObject geometryContainer = new GameObject("GeometryContainer");
             geometryContainer.transform.SetParent(modelContainer.transform, false);
 
-            // インスタンス化の成否を確認 (Issue #756 関連の堅牢性向上)
             var successInstantiate = await currentLoader.InstantiateMainSceneAsync(geometryContainer.transform);
             if (!successInstantiate)
             {
-                Debug.LogError($"[Avatar] GLBのインスタンス化に失敗しました: {url}");
+                Debug.LogError($"[Avatar] Instantiate failed: {url}");
                 return;
             }
             
             Debug.Log($"[Avatar] InstantiateMainSceneAsync completed. GeometryContainer children: {geometryContainer.transform.childCount}");
             
-            // 【重要】Issue #756 対策: ビルド後のマテリアル消失を防ぐため、
-            // CustomMaterialGenerator 側で有効なシェーダーへのフォールバックが行われます。
-            // また、urpLitShader フィールドによってビルド時に対象シェーダーがストリッピングされるのを防いでいます。
-
-            // メッシュの底面がコンテナの原点（ピボット）に来るように位置を調整します
             Bounds bounds = new Bounds(geometryContainer.transform.position, Vector3.zero);
             bool hasBounds = false;
             
@@ -372,11 +338,11 @@ public class Avatar : NetworkBehaviour
 
             UpdateModelTransform();
             UpdateLocalVisibility();
-            Debug.Log($"アバターを正常に読み込みました: {url}");
+            Debug.Log($"Avatar loaded successfully: {url}");
         }
         else
         {
-            Debug.LogError($"アバターの読み込みに失敗しました: {url}");
+            Debug.LogError($"Avatar load failed: {url}");
         }
     }
 
@@ -400,7 +366,7 @@ public class Avatar : NetworkBehaviour
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
         }
-        Debug.Log("[Avatar] Respawned due to falling below -100Y.");
+        Debug.Log("[Avatar] Respawned due to falling.");
     }
 
     public override void OnDestroy()

@@ -1,9 +1,6 @@
 using UnityEngine;
 using Unity.Netcode;
 
-/// <summary>
-/// キーボード入力を受け取り、AvatarColorControllerに色変更を指示するクラス。
-/// </summary>
 [RequireComponent(typeof(AvatarColorController))]
 public class AvatarColorKeyboardInput : NetworkBehaviour
 {
@@ -16,20 +13,16 @@ public class AvatarColorKeyboardInput : NetworkBehaviour
 
     private void Update()
     {
-        // ネットワーク上の所有者（Owner）でない場合は処理しない
         if (!IsOwner) return;
 
         HandleKeyboardColorInput();
     }
 
-    /// <summary>
-    /// キーボードの 1-0 キー入力を監視し、Hue（0-1）を変更します。
-    /// </summary>
     private void HandleKeyboardColorInput()
     {
         if (UnityEngine.InputSystem.Keyboard.current == null) return;
 
-        int keyPressedIndex = -1; // 0-9
+        int keyPressedIndex = -1;
         var kb = UnityEngine.InputSystem.Keyboard.current;
 
         if (kb.digit1Key.wasPressedThisFrame) keyPressedIndex = 0;

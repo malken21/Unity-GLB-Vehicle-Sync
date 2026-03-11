@@ -16,7 +16,6 @@ public class CustomMaterialGenerator : IMaterialGenerator
     {
         _fallbackShader = fallbackShader;
         
-        // URP のデフォルトジェネレーターを取得
         var urpAsset = (UniversalRenderPipelineAsset)(QualitySettings.renderPipeline ? QualitySettings.renderPipeline : GraphicsSettings.defaultRenderPipeline);
         _internalGenerator = new UniversalRPMaterialGenerator(urpAsset);
     }
@@ -28,10 +27,8 @@ public class CustomMaterialGenerator : IMaterialGenerator
 
     public UnityEngine.Material GenerateMaterial(MaterialBase gltfMaterial, IGltfReadable gltf, bool pointsSupport = false)
     {
-        // まずは内部ジェネレーターでマテリアルを生成
         UnityEngine.Material mat = _internalGenerator.GenerateMaterial(gltfMaterial, gltf, pointsSupport);
 
-        // 生成されたマテリアルのシェーダーを確認し、エラーや不正な場合にフォールバックを適用
         if (mat != null && _fallbackShader != null)
         {
             string sName = mat.shader != null ? mat.shader.name : "null";

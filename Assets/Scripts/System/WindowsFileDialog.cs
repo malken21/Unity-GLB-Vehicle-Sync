@@ -49,7 +49,7 @@ public class WindowsFileDialog
         ofn.initialDir = UnityEngine.Application.dataPath;
         ofn.title = title;
         ofn.defExt = "glb";
-        ofn.flags = 0x00080000 | 0x00001000 | 0x00000800 | 0x00000200 | 0x00000008;//OFN_EXPLORER|OFN_FILEMUSTEXIST|OFN_PATHMUSTEXIST| OFN_ALLOWMULTISELECT|OFN_NOCHANGEDIR
+        ofn.flags = 0x00080000 | 0x00001000 | 0x00000800 | 0x00000200 | 0x00000008;
         ofn.dlgOwner = GetActiveWindow();
 
         if (GetOpenFileName(ofn))

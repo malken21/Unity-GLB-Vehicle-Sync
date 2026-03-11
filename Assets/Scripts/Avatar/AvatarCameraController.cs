@@ -1,11 +1,6 @@
 using UnityEngine;
 using Unity.Netcode;
 
-/// <summary>
-/// アバターに追従するカメラ制御、または俯瞰カメラ制御を担当するクラス。
-/// カメラの追従処理は Main Camera 側の AvatarFollowCamera に委任し、
-/// このスクリプトはモードの切り替えとターゲット設定のみを担う。
-/// </summary>
 public class AvatarCameraController : NetworkBehaviour
 {
     private static readonly Vector3 OverheadPosition = new Vector3(0f, 50f, 0f);
@@ -37,18 +32,15 @@ public class AvatarCameraController : NetworkBehaviour
             return;
         }
 
-        // AvatarFollowCamera を Main Camera に追加（未アタッチの場合のみ）
         var followCam = Camera.main.GetComponent<AvatarFollowCamera>();
         if (followCam == null)
         {
             followCam = Camera.main.gameObject.AddComponent<AvatarFollowCamera>();
         }
 
-        // Horiz 子オブジェクトを探してターゲットとして渡す
         var horizTransform = transform.Find("Horiz") ?? transform;
         followCam.SetTarget(horizTransform);
 
-        // カメラの親子関係を解除（以前にアタッチされていた場合の保険）
         Camera.main.transform.SetParent(null);
 
         Debug.Log($"[AvatarCamera] AvatarFollowCamera target set to: {horizTransform.name}");
@@ -82,7 +74,6 @@ public class AvatarCameraController : NetworkBehaviour
                 followCam.ClearTarget();
             }
 
-            // 念のため親子関係も解除
             if (Camera.main.transform.IsChildOf(transform))
             {
                 Camera.main.transform.SetParent(null);

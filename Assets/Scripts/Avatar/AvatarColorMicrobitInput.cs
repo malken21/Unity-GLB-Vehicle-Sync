@@ -1,9 +1,6 @@
 using UnityEngine;
 using Unity.Netcode;
 
-/// <summary>
-/// MicrobitからのBLE入力を受け取り、AvatarColorControllerに色変更を指示するクラス。
-/// </summary>
 [RequireComponent(typeof(AvatarColorController))]
 public class AvatarColorMicrobitInput : NetworkBehaviour
 {
@@ -34,9 +31,6 @@ public class AvatarColorMicrobitInput : NetworkBehaviour
         base.OnNetworkDespawn();
     }
 
-    /// <summary>
-    /// BLE から受信した文字列を処理します。
-    /// </summary>
     private void HandleDataReceived(string data)
     {
         if (!IsOwner) return;
@@ -49,10 +43,6 @@ public class AvatarColorMicrobitInput : NetworkBehaviour
         }
     }
 
-    /// <summary>
-    /// 受信したカラーコマンドをアバターの ExerciseBall に適用します。
-    /// Hue値に変換して保持します。
-    /// </summary>
     private void ApplyColorCommand(string colorCmd)
     {
         string colorData = colorCmd.Substring(2).Trim();
@@ -62,21 +52,17 @@ public class AvatarColorMicrobitInput : NetworkBehaviour
             if (IsOwner)
             {
                 colorController.SetHue(hue);
-                Debug.Log($"[AvatarColorMicrobitInput] Hue を {hue} に変更するようネットワークに送信しました");
+                Debug.Log($"[AvatarColorMicrobitInput] Sent color change request: {hue}");
             }
         }
     }
 
-    /// <summary>
-    /// 文字列データを色相(Hue)情報に変換します。
-    /// </summary>
     private bool TryParseMicrobitColorToHue(string colorData, out float hue)
     {
         hue = 0f;
         Color color = Color.white;
         bool success = false;
 
-        // "R,G,B" フォーマットのチェック (例: "255,128,0")
         string[] rgbParts = colorData.Split(',');
         if (rgbParts.Length == 3)
         {
@@ -91,7 +77,6 @@ public class AvatarColorMicrobitInput : NetworkBehaviour
 
         if (!success)
         {
-            // カラー名のマッピング
             switch (colorData)
             {
                 case "RED": color = Color.red; success = true; break;
@@ -101,7 +86,6 @@ public class AvatarColorMicrobitInput : NetworkBehaviour
                 case "WHITE": color = Color.white; success = true; break;
                 case "BLACK": color = Color.black; success = true; break;
                 default:
-                    // 16進数カラーコードのチェック
                     string htmlColor = colorData.StartsWith("#") ? colorData : "#" + colorData;
                     if (ColorUtility.TryParseHtmlString(htmlColor, out color))
                     {

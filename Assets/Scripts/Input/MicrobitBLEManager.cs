@@ -6,37 +6,27 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
-/// <summary>
-/// MicroBridge (WebSocketサーバー)経由で BBC micro:bit との通信を管理するクラス。
-/// 従来のBLE通信機能をWebSocket通信に置き換えた実装です。
-/// </summary>
 public class MicrobitBLEManager : MonoBehaviour
 {
     public static MicrobitBLEManager Instance { get; private set; }
 
-    [Header("設定")]
     [SerializeField] private string websocketUrl = "ws://127.0.0.1:4000";
     [SerializeField] private int maxReconnectDelayMs = 5000;
 
-    [Header("連携機能の有効/無効")]
     public bool enableMicrobit = true;
 
-    [Header("ステータス")]
     public bool isConnected = false;
     public string lastReceivedData = "";
-    public string statusMessage = "未接続";
+    public string statusMessage = "Disconnected";
 
-    // イベント
     public event Action<string> OnDataReceived;
     public event Action OnConnected;
     public event Action OnDisconnected;
 
-    // メインスレッドで処理を実行するためのキュー
     private ConcurrentQueue<string> mainThreadActionQueue = new ConcurrentQueue<string>();
     private ConcurrentQueue<Action> mainThreadActions = new ConcurrentQueue<Action>();
     private ConcurrentQueue<string> dataQueue = new ConcurrentQueue<string>();
     
-    // 未処理の受信バッファ（パース用）
     private string receiveBuffer = "";
 
     private ClientWebSocket ws;
@@ -54,9 +44,9 @@ public class MicrobitBLEManager : MonoBehaviour
                 enableMicrobit = ConnectionManager.Instance.enableMicrobit;
                 if (!enableMicrobit)
                 {
-                    statusMessage = "機能無効化 (-enableMicrobit false)";
+                    statusMessage = "Disabled (-enableMicrobit false)";
                 }
-                Debug.Log($"[MicrobitBLE] ConnectionManager により連携機能を{(enableMicrobit ? "有効化" : "無効化")}しました。");
+                Debug.Log($"[MicrobitBLE] Microbit integration {(enableMicrobit ? "enabled" : "disabled")}.");
             }
         }
         else
@@ -79,23 +69,17 @@ public class MicrobitBLEManager : MonoBehaviour
         ProcessQueues();
     }
 
-    /// <summary>
-    /// メインスレッドで実行する必要があるキューの処理を行います。
-    /// </summary>
     private void ProcessQueues()
     {
-        // メインスレッドで受信データイベントをディスパッチ
         while (dataQueue.TryDequeue(out string data))
         {
             receiveBuffer += data;
         }
 
-        // 行単位で分割してイベントを発火
         int newLineIdx;
         while ((newLineIdx = receiveBuffer.IndexOf('\n')) >= 0)
         {
             string line = receiveBuffer.Substring(0, newLineIdx).Trim();
-            // 次の処理のためにバッファを更新
             receiveBuffer = receiveBuffer.Substring(newLineIdx + 1);
 
             if (!string.IsNullOrEmpty(line))
@@ -104,9 +88,6 @@ public class MicrobitBLEManager : MonoBehaviour
             }
         }
 
-        // 改行が含まれていないが、カンマが含まれている場合に備えた予備処理
-        // 送信頻度が低い場合（値変化時のみなど）、バッファが溜まるのを待たずに
-        // カンマをデリミタとして処理を開始する
         if (receiveBuffer.Length > 0)
         {
             int lastCommaIdx = receiveBuffer.LastIndexOf(',');
@@ -123,14 +104,12 @@ public class MicrobitBLEManager : MonoBehaviour
             }
         }
 
-        // メインスレッドでステータスメッセージを更新
         while (mainThreadActionQueue.TryDequeue(out string status))
         {
             statusMessage = status;
             Debug.Log($"[MicrobitBLE] {status}");
         }
 
-        // メインスレッドでコールバックアクションを実行
         while (mainThreadActions.TryDequeue(out Action action))
         {
             try { action?.Invoke(); } catch (Exception ex) { Debug.LogError($"[MicrobitBLE] Action execution error: {ex.Message}"); }
@@ -147,19 +126,13 @@ public class MicrobitBLEManager : MonoBehaviour
         OnDataReceived?.Invoke(line);
     }
 
-    /// <summary>
-    /// 接続を再試行します。
-    /// </summary>
     public void RestartScanning()
     {
-        mainThreadActionQueue.Enqueue("WebSocketへの接続を再試行します...");
+        mainThreadActionQueue.Enqueue("Retrying connection...");
         Disconnect();
         StartScanning();
     }
 
-    /// <summary>
-    /// MicroBridgeサーバーへの接続を開始します。（以前のスキャンと同等の位置づけ）
-    /// </summary>
     public void StartScanning()
     {
         if (cancellationTokenSource != null)
@@ -183,19 +156,18 @@ public class MicrobitBLEManager : MonoBehaviour
                 using (ws = new ClientWebSocket())
                 {
                     Uri serverUri = new Uri(websocketUrl);
-                    mainThreadActionQueue.Enqueue($"{serverUri} に接続中...");
+                    mainThreadActionQueue.Enqueue($"Connecting to {serverUri}...");
 
                     await ws.ConnectAsync(serverUri, token);
                     
                     if (ws.State == WebSocketState.Open)
                     {
                         isConnected = true;
-                        mainThreadActionQueue.Enqueue("MicroBridgeに接続しました。データ受信待機中...");
+                        mainThreadActionQueue.Enqueue("Connected to MicroBridge.");
                         
-                        // イベントの発行はメインスレッド側のキューへディスパッチする
                         mainThreadActions.Enqueue(() => { try { OnConnected?.Invoke(); } catch { } });
 
-                        delayMs = 1000; // 成功したらリトライ間隔をリセット
+                        delayMs = 1000;
 
                         await ReceiveLoopAsync(ws, token);
                     }
@@ -205,7 +177,7 @@ public class MicrobitBLEManager : MonoBehaviour
             {
                 if (!token.IsCancellationRequested)
                 {
-                    mainThreadActionQueue.Enqueue($"接続エラー: {ex.Message}");
+                    mainThreadActionQueue.Enqueue($"Connection error: {ex.Message}");
                 }
             }
             finally
@@ -213,14 +185,14 @@ public class MicrobitBLEManager : MonoBehaviour
                 if (isConnected)
                 {
                     isConnected = false;
-                    mainThreadActionQueue.Enqueue("MicroBridgeから切断されました。");
+                    mainThreadActionQueue.Enqueue("Disconnected from MicroBridge.");
                     mainThreadActions.Enqueue(() => { try { OnDisconnected?.Invoke(); } catch { } });
                 }
             }
 
             if (!token.IsCancellationRequested)
             {
-                mainThreadActionQueue.Enqueue($"{delayMs / 1000.0}秒後に再接続を試行します...");
+                mainThreadActionQueue.Enqueue($"Retrying in {delayMs / 1000.0}s...");
                 await Task.Delay(delayMs, token);
                 delayMs = Mathf.Min(delayMs * 2, maxReconnectDelayMs);
             }
@@ -263,7 +235,6 @@ public class MicrobitBLEManager : MonoBehaviour
             {
                 try { _ = ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None); } catch { }
             }
-            // using ブロックを抜ける際に自動的に Dispose されるため、ここでは呼ばない
             ws = null;
         }
     }
