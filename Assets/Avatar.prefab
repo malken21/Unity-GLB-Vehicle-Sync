@@ -236,6 +236,11 @@ GameObject:
   - component: {fileID: 6189257738961732581}
   - component: {fileID: 4269160822374962831}
   - component: {fileID: -4221176684486193816}
+  - component: {fileID: 1046417490605377532}
+  - component: {fileID: -8841174127709580046}
+  - component: {fileID: 5270874406497533824}
+  - component: {fileID: 4802109642652633975}
+  - component: {fileID: -888950815913415405}
   m_Layer: 0
   m_Name: Avatar
   m_TagString: Untagged
@@ -406,8 +411,8 @@ MonoBehaviour:
   targetRigidbody: {fileID: 4529568741319297461}
   targetTransform: {fileID: 5757329343080021427}
   torqueStrength: 5
-  rotationSpeed: 100
-  wsAxis: {x: 0, y: 0, z: 1}
+  rotationSpeed: 30
+  wsAxis: {x: 1, y: 0, z: 0}
   adAxis: {x: 0, y: 0, z: 0}
   dampingFactor: 5
 --- !u!114 &-4221176684486193816
@@ -421,10 +426,79 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 998589f8582551b40b40dd360b209b46, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MicrobitAvatarController
+  m_EditorClassIdentifier: Assembly-CSharp::AvatarMovementController
   ShowTopMostFoldoutHeaderGroup: 1
   jumpForce: 5
   rotationSpeed: 30
-  moveTorqueStrength: 20
-  groundCheckDistance: 1.1
-  horizTransform: {fileID: 0}
+  moveTorqueStrength: 3
+  groundCheckDistance: 0.2
+  groundCheckOffset: 0.1
+  horizTransform: {fileID: 5757329343080021427}
+  jumpBufferTime: 0.5
+  jumpThreshold: 50
+--- !u!114 &1046417490605377532
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9030851858174537478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86320112b9b96be40a8ea4db279f0617, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AvatarInputHandler
+  ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &-8841174127709580046
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9030851858174537478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4f697bb5933014459498305a6e40d90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AvatarCameraController
+  ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &5270874406497533824
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9030851858174537478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67934481171eb8544a62aba5245965f9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AvatarColorController
+  ShowTopMostFoldoutHeaderGroup: 1
+  targetBallRenderer: {fileID: 0}
+--- !u!114 &4802109642652633975
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9030851858174537478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 73108ec355fda754b8d8961adb93ff45, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AvatarColorKeyboardInput
+  ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &-888950815913415405
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9030851858174537478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1692139277bfbef49ae1cbf5d7f7780f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AvatarColorMicrobitInput
+  ShowTopMostFoldoutHeaderGroup: 1

@@ -17,7 +17,7 @@ public class AvatarFollowCamera : MonoBehaviour
         Debug.Log("[AvatarFollowCamera] Start() called. Camera is active.");
     }
 
-    private void LateUpdate()
+    private void Update()
     {
         if (_horizTarget == null)
         {
@@ -27,18 +27,7 @@ public class AvatarFollowCamera : MonoBehaviour
                 _searchTimer = 0f;
                 TryFindHorizTarget();
             }
-            return;
         }
-
-        Vector3 desiredPosition = _horizTarget.position
-            - _horizTarget.forward * followDistance
-            + Vector3.up * heightOffset;
-
-        transform.position = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed * Time.deltaTime);
-
-        Vector3 lookTarget = _horizTarget.position + Vector3.up * (heightOffset * 0.3f);
-        Quaternion desiredRotation = Quaternion.LookRotation(lookTarget - transform.position, Vector3.up);
-        transform.rotation = Quaternion.Slerp(transform.rotation, desiredRotation, smoothSpeed * Time.deltaTime);
     }
 
     private void TryFindHorizTarget()
@@ -64,15 +53,24 @@ public class AvatarFollowCamera : MonoBehaviour
                 var avatar = netObj.GetComponent<Avatar>();
                 if (avatar != null)
                 {
-                    var horiz = netObj.transform.Find("Horiz");
+                    Transform horiz = null;
+                    foreach (var child in netObj.GetComponentsInChildren<Transform>(true))
+                    {
+                        if (child.name == "Horiz")
+                        {
+                            horiz = child;
+                            break;
+                        }
+                    }
+
                     if (horiz != null)
                     {
-                        _horizTarget = horiz;
+                        SetTarget(horiz);
                         Debug.Log($"[AvatarFollowCamera] Target 'Horiz' found on {netObj.name}.");
                     }
                     else
                     {
-                        _horizTarget = netObj.transform;
+                        SetTarget(netObj.transform);
                         Debug.LogWarning("[AvatarFollowCamera] 'Horiz' not found. Using avatar root.");
                     }
                     break;
@@ -84,11 +82,24 @@ public class AvatarFollowCamera : MonoBehaviour
     public void SetTarget(Transform horiz)
     {
         _horizTarget = horiz;
+        if (horiz != null)
+        {
+            transform.SetParent(horiz);
+            
+            // 親が設定されたらローカル座標と回転を1度だけ初期化する
+            transform.localPosition = new Vector3(0, heightOffset, -followDistance);
+            transform.LookAt(horiz);
+        }
+        else
+        {
+            transform.SetParent(null);
+        }
         Debug.Log($"[AvatarFollowCamera] Target set to: {horiz?.name ?? "null"}");
     }
 
     public void ClearTarget()
     {
         _horizTarget = null;
+        transform.SetParent(null);
     }
 }

@@ -15,8 +15,8 @@ public class AvatarMovementController : NetworkBehaviour
     private float prevInputR = 0f;
 
     [SerializeField] private float jumpForce = 5f;
-    [SerializeField] private float rotationSpeed = 100f;
-    [SerializeField] private float moveTorqueStrength = 10f;
+    [SerializeField] private float rotationSpeed = 30f;
+    [SerializeField] private float moveTorqueStrength = 3f;
     [SerializeField] private float groundCheckDistance = 0.2f;
     [SerializeField] private float groundCheckOffset = 0.1f;
     [SerializeField] private Transform horizTransform;
@@ -37,7 +37,14 @@ public class AvatarMovementController : NetworkBehaviour
 
         if (horizTransform == null)
         {
-            horizTransform = transform.Find("Horiz");
+            foreach (var child in GetComponentsInChildren<Transform>(true))
+            {
+                if (child.name == "Horiz")
+                {
+                    horizTransform = child;
+                    break;
+                }
+            }
             if (horizTransform == null)
             {
                 Debug.LogWarning("[AvatarMovementController] 'Horiz' child not found. Using root forward.");
@@ -163,24 +170,44 @@ public class AvatarMovementController : NetworkBehaviour
         if (mbitInputR < -15f) rotateDir -= 1f;
         else if (mbitInputR > 15f) rotateDir += 1f;
 
+        rotateDir = Mathf.Clamp(rotateDir, -1f, 1f);
+
         float moveDir = 0f;
-        if (mbitInputA == 1) moveDir += 1f;
-        if (mbitInputB == 1) moveDir -= 1f;
         if (Keyboard.current != null)
         {
             if (Keyboard.current.wKey.isPressed) moveDir += 1f;
             if (Keyboard.current.sKey.isPressed) moveDir -= 1f;
         }
 
+        if (mbitInputA == 1) moveDir += 1f;
+        if (mbitInputB == 1) moveDir -= 1f;
+
+        moveDir = Mathf.Clamp(moveDir, -1f, 1f);
+
         if (rotateDir != 0f)
         {
-            float clampedRotate = Mathf.Clamp(rotateDir, -1f, 1f);
-            Vector3 upAxis = horizTransform != null ? horizTransform.up : Vector3.up;
-            transform.Rotate(upAxis, clampedRotate * rotationSpeed * Time.fixedDeltaTime, Space.World);
+            // 左右キー（左右の入力）は、アバターのベースであるHorizのY軸（up）回りの回転（Yaw旋回）としてHoriz自体に適用
+            if (horizTransform != null)
+            {
+                KeepHoriz keepHoriz = horizTransform.GetComponent<KeepHoriz>();
+                if (keepHoriz != null)
+                {
+                    keepHoriz.AddYaw(rotateDir * rotationSpeed * Time.fixedDeltaTime);
+                }
+                else
+                {
+                    horizTransform.Rotate(Vector3.up, rotateDir * rotationSpeed * Time.fixedDeltaTime, Space.World);
+                }
+            }
+            else
+            {
+                transform.Rotate(Vector3.up, rotateDir * rotationSpeed * Time.fixedDeltaTime, Space.World);
+            }
         }
 
         if (moveDir != 0f)
         {
+            // 前後キー（前後の入力）は、HorizのX軸（right）回りのトルク（前後回転・Pitch転がり）として適用
             Vector3 torqueAxis = horizTransform != null ? horizTransform.right : transform.right;
             Vector3 torque = torqueAxis * moveDir * moveTorqueStrength;
             rb.AddTorque(torque, ForceMode.Force);

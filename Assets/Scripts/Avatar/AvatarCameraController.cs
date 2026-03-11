@@ -38,7 +38,16 @@ public class AvatarCameraController : NetworkBehaviour
             followCam = Camera.main.gameObject.AddComponent<AvatarFollowCamera>();
         }
 
-        var horizTransform = transform.Find("Horiz") ?? transform;
+        Transform horizTransform = null;
+        foreach (var child in GetComponentsInChildren<Transform>(true))
+        {
+            if (child.name == "Horiz")
+            {
+                horizTransform = child;
+                break;
+            }
+        }
+        horizTransform = horizTransform ?? transform;
         followCam.SetTarget(horizTransform);
 
         Camera.main.transform.SetParent(null);
