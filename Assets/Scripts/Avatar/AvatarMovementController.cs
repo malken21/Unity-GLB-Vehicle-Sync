@@ -17,9 +17,11 @@ public class AvatarMovementController : NetworkBehaviour
     [SerializeField] private float jumpForce = 5f;
     [SerializeField] private float rotationSpeed = 30f;
     [SerializeField] private float moveTorqueStrength = 3f;
-    [SerializeField] private float groundCheckDistance = 0.2f;
-    [SerializeField] private float groundCheckOffset = 0.1f;
+    [SerializeField] private float groundCheckDistance = 1.0f;
+    [SerializeField] private float groundCheckOffset = 0.7f;
+    [SerializeField] private LayerMask groundLayer = -1;
     [SerializeField] private Transform horizTransform;
+    [SerializeField] private KeyboardRotator keyboardRotator;
 
     private float jumpBufferTimer = 0f;
     [SerializeField] private float jumpBufferTime = 0.5f;
@@ -50,6 +52,11 @@ public class AvatarMovementController : NetworkBehaviour
                 Debug.LogWarning("[AvatarMovementController] 'Horiz' child not found. Using root forward.");
                 horizTransform = transform;
             }
+        }
+
+        if (keyboardRotator == null)
+        {
+            keyboardRotator = GetComponentInChildren<KeyboardRotator>();
         }
     }
 
@@ -140,11 +147,8 @@ public class AvatarMovementController : NetworkBehaviour
     {
         if (!IsOwner) return;
 
-        if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
-        {
-            jumpBufferTimer = jumpBufferTime;
-            currentJumpStrength = 180; // Keyboard jump is max strength
-        }
+        // Keyboard inputs are now handled by KeyboardRotator (Space jump), 
+        // but we keep the logic for Microbit jump buffering here if it needs to interact with movement.
 
         if (jumpBufferTimer > 0f)
         {
@@ -215,34 +219,22 @@ public class AvatarMovementController : NetworkBehaviour
 
         if (jumpBufferTimer > 0f)
         {
-            if (IsGrounded())
+            // Scale jump force between 50% and 100% of jumpForce based on strength (50-180)
+            float scale = 1.0f;
+            if (currentJumpStrength >= jumpThreshold)
             {
-                // Scale jump force between 50% and 100% of jumpForce based on strength (50-180)
-                // If strength is 1-49 (old protocol), treat as max strength for safety or mid-range
-                float scale = 1.0f;
-                if (currentJumpStrength >= jumpThreshold)
-                {
-                    scale = Mathf.Lerp(0.5f, 1.0f, (currentJumpStrength - jumpThreshold) / (180f - jumpThreshold));
-                }
-                
-                rb.AddForce(Vector3.up * jumpForce * scale, ForceMode.Impulse);
-                Debug.Log($"[AvatarMovementController] Jump triggered (buffer: {jumpBufferTimer:F2}s, strength: {currentJumpStrength}, scale: {scale:F2})");
-                
+                scale = Mathf.Lerp(0.5f, 1.0f, (currentJumpStrength - jumpThreshold) / (180f - jumpThreshold));
+            }
+
+            if (keyboardRotator != null)
+            {
+                keyboardRotator.Jump(scale);
+                // We assume KeyboardRotator handles grounding and actual force application
                 jumpBufferTimer = 0f;
                 currentJumpStrength = 0;
             }
         }
     }
 
-    private bool IsGrounded()
-    {
-        // Raycast from slightly above the center down to the floor
-        Vector3 origin = transform.position + Vector3.up * groundCheckOffset;
-        bool grounded = Physics.Raycast(origin, Vector3.down, groundCheckDistance + groundCheckOffset);
-        
-        // Debug visualization in Scene view
-        Debug.DrawRay(origin, Vector3.down * (groundCheckDistance + groundCheckOffset), grounded ? Color.green : Color.red);
-        
-        return grounded;
-    }
+    // IsGrounded logic has been moved to KeyboardRotator
 }
