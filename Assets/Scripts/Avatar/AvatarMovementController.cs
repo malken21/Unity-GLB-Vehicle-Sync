@@ -16,10 +16,12 @@ public class AvatarMovementController : NetworkBehaviour
 
     [SerializeField] private float jumpForce = 5f;
     [SerializeField] private float rotationSpeed = 30f;
-    [SerializeField] private float moveTorqueStrength = 3f;
+    [SerializeField] private float moveTorqueStrength = 13f;
     [SerializeField] private float groundCheckDistance = 1.0f;
     [SerializeField] private float groundCheckOffset = 0.7f;
     [SerializeField] private LayerMask groundLayer = -1;
+    [SerializeField] private float dampingFactor = 5.0f;
+
     [SerializeField] private Transform horizTransform;
     [SerializeField] private KeyboardRotator keyboardRotator;
 
@@ -165,23 +167,12 @@ public class AvatarMovementController : NetworkBehaviour
 
         float rotateDir = 0f;
 
-        if (Keyboard.current != null)
-        {
-            if (Keyboard.current.dKey.isPressed) rotateDir += 1f;
-            if (Keyboard.current.aKey.isPressed) rotateDir -= 1f;
-        }
-
         if (mbitInputR < -15f) rotateDir -= 1f;
         else if (mbitInputR > 15f) rotateDir += 1f;
 
         rotateDir = Mathf.Clamp(rotateDir, -1f, 1f);
 
         float moveDir = 0f;
-        if (Keyboard.current != null)
-        {
-            if (Keyboard.current.wKey.isPressed) moveDir += 1f;
-            if (Keyboard.current.sKey.isPressed) moveDir -= 1f;
-        }
 
         if (mbitInputA == 1) moveDir += 1f;
         if (mbitInputB == 1) moveDir -= 1f;
@@ -215,6 +206,13 @@ public class AvatarMovementController : NetworkBehaviour
             Vector3 torqueAxis = horizTransform != null ? horizTransform.right : transform.right;
             Vector3 torque = torqueAxis * moveDir * moveTorqueStrength;
             rb.AddTorque(torque, ForceMode.Force);
+        }
+        else
+        {
+            // Apply damping when no input
+            Vector3 currentAngularVelocity = rb.angularVelocity;
+            Vector3 resistanceTorque = -currentAngularVelocity * dampingFactor;
+            rb.AddTorque(resistanceTorque, ForceMode.Force);
         }
 
         if (jumpBufferTimer > 0f)
