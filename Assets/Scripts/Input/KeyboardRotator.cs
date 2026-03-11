@@ -11,13 +11,13 @@ public class KeyboardRotator : MonoBehaviour
     [SerializeField] private Transform targetTransform;
 
     [Tooltip("W/Sキー入力時のトルク回転の強さ")]
-    [SerializeField] private float torqueStrength = 10f;
+    [SerializeField] private float torqueStrength = 13f;
 
     [Tooltip("A/Dキー入力時の直接回転の速度（度/秒）")]
     [SerializeField] private float rotationSpeed = 30f;
 
     [Tooltip("W/Sキー入力時の回転軸（ローカル座標系）。デフォルトはX軸（前転・後転）。")]
-    [SerializeField] private Vector3 wsAxis = Vector3.forward;
+    [SerializeField] private Vector3 wsAxis = Vector3.right;
 
     [Tooltip("A/Dキー入力時の回転軸（ローカル座標系）。デフォルトはY軸（右旋回・左旋回）。横転させたい場合は(0, 0, -1)などに設定してください。")]
     [SerializeField] private Vector3 adAxis = Vector3.up;
