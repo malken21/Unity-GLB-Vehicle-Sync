@@ -409,7 +409,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AvatarMovementController
   ShowTopMostFoldoutHeaderGroup: 1
-  jumpForce: 5
+  jumpForce: 20
   rotationSpeed: 30
   moveTorqueStrength: 3
   groundCheckDistance: 1.05
@@ -418,9 +418,9 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 128
   dampingFactor: 5
-  horizTransform: {fileID: 5757329343080021427}
+  horizTransform: {fileID: 0}
   jumpBufferTime: 0.5
-  jumpThreshold: 50
+  jumpThreshold: 10
 --- !u!114 &1046417490605377532
 MonoBehaviour:
   m_ObjectHideFlags: 0
