@@ -433,6 +433,9 @@ MonoBehaviour:
   moveTorqueStrength: 3
   groundCheckDistance: 0.2
   groundCheckOffset: 0.1
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 128
   horizTransform: {fileID: 5757329343080021427}
   jumpBufferTime: 0.5
   jumpThreshold: 50
