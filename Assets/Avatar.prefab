@@ -410,10 +410,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::KeyboardRotator
   targetRigidbody: {fileID: 4529568741319297461}
   targetTransform: {fileID: 5757329343080021427}
-  torqueStrength: 5
+  torqueStrength: 30
   rotationSpeed: 30
   wsAxis: {x: 1, y: 0, z: 0}
-  adAxis: {x: 0, y: 0, z: 0}
+  adAxis: {x: 0, y: 1, z: 0}
   dampingFactor: 5
   jumpForce: 5
   groundCheckDistance: 1
@@ -442,6 +442,7 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 128
+  dampingFactor: 5
   horizTransform: {fileID: 5757329343080021427}
   keyboardRotator: {fileID: 4269160822374962831}
   jumpBufferTime: 0.5
