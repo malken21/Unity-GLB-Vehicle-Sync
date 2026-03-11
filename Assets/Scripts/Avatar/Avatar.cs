@@ -46,9 +46,6 @@ public class Avatar : NetworkBehaviour
 
         if (IsOwner)
         {
-            if (GetComponent<AvatarInputHandler>() == null) gameObject.AddComponent<AvatarInputHandler>();
-            if (GetComponent<AvatarCameraController>() == null) gameObject.AddComponent<AvatarCameraController>();
-
             if (ConnectionManager.Instance.summonAvatar)
             {
                 string filePath = null;
@@ -106,17 +103,6 @@ public class Avatar : NetworkBehaviour
                 mgrGo.AddComponent<MicrobitBLEManager>();
                 Debug.Log("[Avatar] MicrobitBLEManager created.");
             }
-
-            var movementController = GetComponent<AvatarMovementController>();
-            if (movementController == null)
-            {
-                movementController = gameObject.AddComponent<AvatarMovementController>();
-                Debug.Log("[Avatar] AvatarMovementController added.");
-            }
-
-            if (GetComponent<AvatarColorController>() == null) gameObject.AddComponent<AvatarColorController>();
-            if (GetComponent<AvatarColorKeyboardInput>() == null) gameObject.AddComponent<AvatarColorKeyboardInput>();
-            if (GetComponent<AvatarColorMicrobitInput>() == null) gameObject.AddComponent<AvatarColorMicrobitInput>();
         }
     }
 
