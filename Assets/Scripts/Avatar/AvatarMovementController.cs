@@ -31,6 +31,7 @@ public class AvatarMovementController : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        Debug.Log($"[AvatarMovementController] OnNetworkSpawn called. IsOwner: {IsOwner}, Object: {gameObject.name}");
         base.OnNetworkSpawn();
         
         if (MicrobitBLEManager.Instance != null)
@@ -143,6 +144,13 @@ public class AvatarMovementController : NetworkBehaviour
     {
         if (!IsOwner) return;
 
+    Vector3 origin = transform.position + Vector3.up * 0.1f;
+    float distance = groundCheckDistance + 0.1f;
+
+    // シーンビューに線を描画
+    Debug.DrawRay(origin, Vector3.down * distance, Color.red);
+
+
         // Keyboard jump input
         if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
         {
@@ -153,6 +161,14 @@ public class AvatarMovementController : NetworkBehaviour
         if (jumpBufferTimer > 0f)
         {
             jumpBufferTimer -= Time.deltaTime;
+        }
+
+        // DEBUG: スクリプトが稼働しているか確認するためのログ（後で削除）
+        if (Time.frameCount % 60 == 0)
+        {
+            Debug.Log($"[AvatarMovementController] Update running. IsOwner: {IsOwner}");
+            // 常時接地判定を走らせてログを確認
+            IsGrounded();
         }
     }
 
@@ -251,14 +267,28 @@ public class AvatarMovementController : NetworkBehaviour
 
     public bool IsGrounded()
     {
-        // アバターの中心より少し上から下に向けてレイを飛ばす
-        Vector3 origin = transform.position + Vector3.up * groundCheckOffset;
-        // 自身のレイヤーを除外
-        int layerMask = groundLayer.value & ~(1 << gameObject.layer);
-        bool grounded = Physics.Raycast(origin, Vector3.down, groundCheckDistance + groundCheckOffset, layerMask);
+        // グローバル座標のピボット中心から直接下方向にレイを照射
+        Vector3 origin = transform.position;
+        // 自身のレイヤーのみを除外（Everything を強制使用）
+        int layerMask = ~(1 << gameObject.layer);
+        
+        RaycastHit hit;
+        bool grounded = Physics.Raycast(origin, Vector3.down, out hit, groundCheckDistance, layerMask);
+        
+        if (grounded)
+        {
+            Debug.Log($"[AvatarMovementController] Ground detected: {hit.collider.gameObject.name} (Layer: {hit.collider.gameObject.layer})");
+        }
+        else
+        {
+            if (Time.frameCount % 60 == 0)
+            {
+                Debug.Log($"[AvatarMovementController] IsGrounded: No hit. Origin: {origin}, Distance: {groundCheckDistance}, Mask: {layerMask}");
+            }
+        }
         
         // シーンビューでのデバッグ表示
-        Debug.DrawRay(origin, Vector3.down * (groundCheckDistance + groundCheckOffset), grounded ? Color.green : Color.red);
+        Debug.DrawRay(origin, Vector3.down * groundCheckDistance, grounded ? Color.green : Color.red);
         
         return grounded;
     }

@@ -411,8 +411,8 @@ MonoBehaviour:
   jumpForce: 5
   rotationSpeed: 30
   moveTorqueStrength: 3
-  groundCheckDistance: 0.2
-  groundCheckOffset: 0.1
+  groundCheckDistance: 1.05
+  groundCheckOffset: 0
   groundLayer:
     serializedVersion: 2
     m_Bits: 128
