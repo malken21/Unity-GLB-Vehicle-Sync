@@ -415,6 +415,12 @@ MonoBehaviour:
   wsAxis: {x: 1, y: 0, z: 0}
   adAxis: {x: 0, y: 0, z: 0}
   dampingFactor: 5
+  jumpForce: 5
+  groundCheckDistance: 1
+  groundCheckOffset: 0.7
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!114 &-4221176684486193816
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -437,6 +443,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 128
   horizTransform: {fileID: 5757329343080021427}
+  keyboardRotator: {fileID: 4269160822374962831}
   jumpBufferTime: 0.5
   jumpThreshold: 50
 --- !u!114 &1046417490605377532
