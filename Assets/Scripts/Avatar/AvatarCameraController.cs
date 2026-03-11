@@ -50,8 +50,6 @@ public class AvatarCameraController : NetworkBehaviour
         horizTransform = horizTransform ?? transform;
         followCam.SetTarget(horizTransform);
 
-        Camera.main.transform.SetParent(null);
-
         Debug.Log($"[AvatarCamera] AvatarFollowCamera target set to: {horizTransform.name}");
     }
 
@@ -68,7 +66,6 @@ public class AvatarCameraController : NetworkBehaviour
         }
 
         var cameraTransform = Camera.main.transform;
-        cameraTransform.SetParent(null);
         cameraTransform.position = OverheadPosition;
         cameraTransform.rotation = OverheadRotation;
     }
