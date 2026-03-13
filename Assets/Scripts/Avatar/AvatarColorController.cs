@@ -4,7 +4,7 @@ using Unity.Netcode;
 public class AvatarColorController : NetworkBehaviour
 {
     [SerializeField]
-    private Renderer targetBallRenderer;
+    private Renderer targetBallRenderer = default;
 
     private NetworkVariable<float> ballHue = new NetworkVariable<float>(
         0f,

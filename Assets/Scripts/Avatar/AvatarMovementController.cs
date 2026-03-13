@@ -18,11 +18,10 @@ public class AvatarMovementController : NetworkBehaviour
     [SerializeField] private float rotationSpeed = 30f;
     [SerializeField] private float moveTorqueStrength = 13f;
     [SerializeField] private float groundCheckDistance = 1.0f;
-    [SerializeField] private float groundCheckOffset = 0.7f;
     [SerializeField] private LayerMask groundLayer = -1;
     [SerializeField] private float dampingFactor = 5.0f;
 
-    [SerializeField] private Transform horizTransform;
+    [SerializeField] private Transform horizTransform = default;
 
     private float jumpBufferTimer = 0f;
     [SerializeField] private float jumpBufferTime = 0.5f;

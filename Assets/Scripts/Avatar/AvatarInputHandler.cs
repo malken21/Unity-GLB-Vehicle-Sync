@@ -19,7 +19,7 @@ public class AvatarInputHandler : NetworkBehaviour
         if (Keyboard.current != null && Keyboard.current.hKey.wasPressedThisFrame)
         {
             Avatar.s_hideOtherPlayers = !Avatar.s_hideOtherPlayers;
-            Debug.Log($"[AvatarInputHandler] Toggle other players visibility: {!Avatar.s_hideOtherPlayers}");
+            Debug.Log($"[AvatarInputHandler] Toggled other players' visibility. Hidden mode is now: {Avatar.s_hideOtherPlayers}");
             
             foreach (var avatar in FindObjectsByType<Avatar>(FindObjectsSortMode.None))
             {

@@ -19,7 +19,11 @@ public class Avatar : NetworkBehaviour
     
     private readonly NetworkVariable<bool> isVisibleNetwork = new NetworkVariable<bool>(true);
 
-    public static bool s_hideOtherPlayers = false;
+    public static bool s_hideOtherPlayers = true; // Static flag to hide other players locally (Default to hidden)
+    public GameObject appearanceRoot; // Root for all visual/physical components to toggle
+    private float _visibilityCheckTimer = 0f;
+    private const float VisibilityCheckInterval = 1.0f;
+
 
     private Vector3 initialPosition;
     
@@ -132,17 +136,25 @@ public class Avatar : NetworkBehaviour
             targetVisibility = false;
         }
 
-        if (modelContainer != null)
+        if (appearanceRoot != null)
         {
-             modelContainer.SetActive(targetVisibility);
+            appearanceRoot.SetActive(targetVisibility);
         }
-
-        foreach (var c in GetComponents<Collider>())
+        else
         {
-            c.enabled = targetVisibility;
+            // Fallback for backward compatibility if appearanceRoot is not set
+            if (modelContainer != null)
+            {
+                 modelContainer.SetActive(targetVisibility);
+            }
+
+            foreach (var c in GetComponents<Collider>())
+            {
+                c.enabled = targetVisibility;
+            }
         }
         
-        Debug.Log($"[Avatar] Visibility updated to: {targetVisibility}");
+        Debug.Log($"[Avatar] Visibility updated to: {targetVisibility} (Applied to appearanceRoot: {appearanceRoot != null})");
     }
 
     private void UpdateModelTransform()
@@ -245,8 +257,8 @@ public class Avatar : NetworkBehaviour
 
     private GameObject modelContainer;
 
-    [SerializeField] private Transform customModelParent;
-    [SerializeField] private Shader urpLitShader;
+    [SerializeField] private Transform customModelParent = default;
+    [SerializeField] private Shader urpLitShader = default;
 
     private GltfImport currentLoader;
     
@@ -349,6 +361,16 @@ public class Avatar : NetworkBehaviour
             if (transform.position.y <= -100f)
             {
                 Respawn();
+            }
+        }
+        else
+        {
+            // Regularly ensure visibility is correct (for late-loaded objects)
+            _visibilityCheckTimer += Time.deltaTime;
+            if (_visibilityCheckTimer >= VisibilityCheckInterval)
+            {
+                _visibilityCheckTimer = 0f;
+                UpdateLocalVisibility();
             }
         }
     }
