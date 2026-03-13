@@ -240,7 +240,6 @@ GameObject:
   - component: {fileID: 5270874406497533824}
   - component: {fileID: 4802109642652633975}
   - component: {fileID: -888950815913415405}
-  - component: {fileID: 3172165430789007220}
   m_Layer: 0
   m_Name: Avatar
   m_TagString: Untagged
@@ -278,7 +277,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3307858247
+  GlobalObjectIdHash: 309094343
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -350,6 +349,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Avatar
   ShowTopMostFoldoutHeaderGroup: 1
+  appearanceRoot: {fileID: 0}
   customModelParent: {fileID: 8070418163313021191}
   urpLitShader: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
 --- !u!54 &4529568741319297461
@@ -413,12 +413,11 @@ MonoBehaviour:
   rotationSpeed: 30
   moveTorqueStrength: 3
   groundCheckDistance: 1.05
-  groundCheckOffset: 0
   groundLayer:
     serializedVersion: 2
     m_Bits: 128
   dampingFactor: 5
-  horizTransform: {fileID: 0}
+  horizTransform: {fileID: 5757329343080021427}
   jumpBufferTime: 0.5
   jumpThreshold: 10
 --- !u!114 &1046417490605377532
@@ -486,17 +485,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1692139277bfbef49ae1cbf5d7f7780f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AvatarColorMicrobitInput
-  ShowTopMostFoldoutHeaderGroup: 1
---- !u!114 &3172165430789007220
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9030851858174537478}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0301a05891cccaa4a94b65f047758f9f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AvatarVisibilityController
   ShowTopMostFoldoutHeaderGroup: 1
