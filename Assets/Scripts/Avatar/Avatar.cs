@@ -136,25 +136,10 @@ public class Avatar : NetworkBehaviour
             targetVisibility = false;
         }
 
-        if (appearanceRoot != null)
-        {
-            appearanceRoot.SetActive(targetVisibility);
-        }
-        else
-        {
-            // Fallback for backward compatibility if appearanceRoot is not set
-            if (modelContainer != null)
-            {
-                 modelContainer.SetActive(targetVisibility);
-            }
+        foreach (var r in GetComponentsInChildren<Renderer>(true)) r.enabled = targetVisibility;
+        foreach (var c in GetComponentsInChildren<Collider>(true)) c.enabled = targetVisibility;
 
-            foreach (var c in GetComponents<Collider>())
-            {
-                c.enabled = targetVisibility;
-            }
-        }
-        
-        Debug.Log($"[Avatar] Visibility updated to: {targetVisibility} (Applied to appearanceRoot: {appearanceRoot != null})");
+        Debug.Log($"[Avatar] Visibility updated to: {targetVisibility}");
     }
 
     private void UpdateModelTransform()
