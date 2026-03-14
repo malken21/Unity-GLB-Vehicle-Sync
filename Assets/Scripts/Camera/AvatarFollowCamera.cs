@@ -18,7 +18,7 @@ public class AvatarFollowCamera : MonoBehaviour
 
     private void Update()
     {
-        if (_horizTarget == null)
+        if (_horizTarget == null && ConnectionManager.Instance != null && ConnectionManager.Instance.summonAvatar)
         {
             _searchTimer += Time.deltaTime;
             if (_searchTimer >= SearchInterval)
