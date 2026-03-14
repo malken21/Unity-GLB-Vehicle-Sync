@@ -82,8 +82,7 @@ public class Avatar : NetworkBehaviour
                 }
                 else
                 {
-                    Debug.Log("[Avatar] No file selected. Disabling avatar visibility.");
-                    SetVisibilityServerRpc(false);
+                    Debug.Log("[Avatar] No file selected.");
                 }
             }
             else
