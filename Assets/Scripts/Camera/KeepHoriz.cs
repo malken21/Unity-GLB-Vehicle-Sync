@@ -4,24 +4,27 @@ public class KeepHoriz : MonoBehaviour
 {
 
 
+    private float currentYaw = 0f;
+
+    void Start()
+    {
+        // 初期状態でのY軸の回転角度（Yaw）を取得して保存
+        currentYaw = transform.eulerAngles.y;
+    }
+
     void LateUpdate()
     {
-        // ワールド空間でオブジェクトを水平に保ちます
-        Vector3 forward = transform.forward;
-        forward.y = 0;
-        
-        // 真上や真下を見ている場合は、以前の回転を維持するかデフォルトで前方にします
-        if (forward.sqrMagnitude < 0.001f)
-        {
-             forward = Vector3.forward;
-        }
-
-        // World Upに合わせて回転を設定し、Y回転（ヨー）を維持します
-        transform.rotation = Quaternion.LookRotation(forward.normalized, Vector3.up);
+        // ワールド空間でY軸の回転（ヨー）のみを適用し、水平（X, Z軸は0）を保ちます
+        transform.rotation = Quaternion.Euler(0f, currentYaw, 0f);
     }
 
     public void AddYaw(float angleDelta)
     {
-        transform.Rotate(Vector3.up, angleDelta, Space.World);
+        // 内部のYaw角度を更新
+        currentYaw += angleDelta;
+        
+        // 角度が大きくなりすぎないように正規化 (任意ですが、安全のため)
+        currentYaw %= 360f;
+        if (currentYaw < 0f) currentYaw += 360f;
     }
 }
