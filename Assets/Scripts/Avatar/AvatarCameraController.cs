@@ -37,6 +37,7 @@ public class AvatarCameraController : NetworkBehaviour
         {
             followCam = Camera.main.gameObject.AddComponent<AvatarFollowCamera>();
         }
+        followCam.enabled = true;
 
         Transform horizTransform = null;
         foreach (var child in GetComponentsInChildren<Transform>(true))
@@ -63,6 +64,7 @@ public class AvatarCameraController : NetworkBehaviour
         if (followCam != null)
         {
             followCam.ClearTarget();
+            followCam.enabled = false;
         }
 
         var cameraTransform = Camera.main.transform;
