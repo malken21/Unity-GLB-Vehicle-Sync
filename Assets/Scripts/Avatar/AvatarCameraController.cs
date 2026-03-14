@@ -3,14 +3,17 @@ using Unity.Netcode;
 
 public class AvatarCameraController : NetworkBehaviour
 {
-    private static readonly Vector3 OverheadPosition = new Vector3(0f, 50f, 0f);
-    private static readonly Quaternion OverheadRotation = Quaternion.Euler(90f, 0f, 0f);
+    private Vector3 _initialCameraPosition;
+    private Quaternion _initialCameraRotation;
+    private bool _hasInitialTransform;
 
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
 
         if (!IsOwner) return;
+
+        SaveInitialCameraTransform();
 
         bool summonAvatar = ConnectionManager.Instance != null && ConnectionManager.Instance.summonAvatar;
 
@@ -68,8 +71,27 @@ public class AvatarCameraController : NetworkBehaviour
         }
 
         var cameraTransform = Camera.main.transform;
-        cameraTransform.position = OverheadPosition;
-        cameraTransform.rotation = OverheadRotation;
+        if (_hasInitialTransform)
+        {
+            cameraTransform.position = _initialCameraPosition;
+            cameraTransform.rotation = _initialCameraRotation;
+            Debug.Log($"[AvatarCamera] Camera restored to initial position: {_initialCameraPosition}");
+        }
+        else
+        {
+            Debug.LogWarning("[AvatarCamera] Initial camera transform not saved. Cannot restore.");
+        }
+    }
+
+    private void SaveInitialCameraTransform()
+    {
+        if (Camera.main != null && !_hasInitialTransform)
+        {
+            _initialCameraPosition = Camera.main.transform.position;
+            _initialCameraRotation = Camera.main.transform.rotation;
+            _hasInitialTransform = true;
+            Debug.Log($"[AvatarCamera] Initial camera transform saved: {_initialCameraPosition}");
+        }
     }
 
     public override void OnNetworkDespawn()
