@@ -1,30 +1,37 @@
 using UnityEngine;
+using Unity.Netcode;
 
-public class KeepHoriz : MonoBehaviour
+public class KeepHoriz : NetworkBehaviour
 {
+    private readonly NetworkVariable<float> currentYaw = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
-
-    private float currentYaw = 0f;
-
-    void Start()
+    public override void OnNetworkSpawn()
     {
-        // 初期状態でのY軸の回転角度（Yaw）を取得して保存
-        currentYaw = transform.eulerAngles.y;
+        base.OnNetworkSpawn();
+        if (IsOwner)
+        {
+            // 初期状態でのY軸の回転角度（Yaw）を取得して保存
+            currentYaw.Value = transform.eulerAngles.y;
+        }
     }
 
     void LateUpdate()
     {
         // ワールド空間でY軸の回転（ヨー）のみを適用し、水平（X, Z軸は0）を保ちます
-        transform.rotation = Quaternion.Euler(0f, currentYaw, 0f);
+        transform.rotation = Quaternion.Euler(0f, currentYaw.Value, 0f);
     }
 
     public void AddYaw(float angleDelta)
     {
+        if (!IsOwner) return;
+
         // 内部のYaw角度を更新
-        currentYaw += angleDelta;
+        float newYaw = currentYaw.Value + angleDelta;
         
         // 角度が大きくなりすぎないように正規化 (任意ですが、安全のため)
-        currentYaw %= 360f;
-        if (currentYaw < 0f) currentYaw += 360f;
+        newYaw %= 360f;
+        if (newYaw < 0f) newYaw += 360f;
+
+        currentYaw.Value = newYaw;
     }
 }
